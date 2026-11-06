@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fiona Cowie - Product Designer</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2280%22>✨</text></svg>">
+    <meta name="description" content="Fiona Cowie, product designer crafting thoughtful, purpose-driven digital experiences. Helping teams bring ideas to life from concept to launch.">
+    
+    <!-- Social sharing meta tags -->
+    <meta property="og:title" content="Fiona Cowie - Product Designer">
+    <meta property="og:description" content="Product designer crafting thoughtful, purpose-driven digital experiences. Helping teams bring ideas to life from concept to launch.">
+    <meta property="og:image" content="https://fionacowie.github.io/images/home-hero.png">
+    <meta property="og:type" content="website">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Fiona Cowie - Product Designer">
+    <meta name="twitter:description" content="Product designer crafting thoughtful, purpose-driven digital experiences.">
+    <meta name="twitter:image" content="https://fionacowie.github.io/images/home-hero.png">
+    
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="postcard.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Flamenco:wght@300&family=Jost:ital,wght@0,400;0,500;0,700;1,400;1,700&display=swap" rel="stylesheet">
+    
+<!-- Set initial page position for transitions BEFORE page renders -->
+<script>
+    (function() {
+        // More defensive initial state setting
+        try {
+            const transitionDirection = sessionStorage.getItem('transitionDirection');
+            const timestamp = sessionStorage.getItem('transitionTimestamp');
+            const currentTime = Date.now();
+            
+            // Only hide if we have fresh transition data
+            if (transitionDirection && timestamp && 
+                (currentTime - parseInt(timestamp) < 1000)) { // Reduced to 1 second
+                
+                if (transitionDirection === 'to-case-study') {
+                    document.documentElement.style.setProperty('--initial-transform', 'translateX(100%)');
+                    document.documentElement.style.setProperty('--initial-opacity', '0');
+                    document.documentElement.style.setProperty('--initial-visibility', 'hidden');
+                } else if (transitionDirection === 'to-home') {
+                    document.documentElement.style.setProperty('--initial-transform', 'translateX(-100%)');
+                    document.documentElement.style.setProperty('--initial-opacity', '0');
+                    document.documentElement.style.setProperty('--initial-visibility', 'hidden');
+                }
+                
+                // Auto-cleanup after setting
+                setTimeout(() => {
+                    document.documentElement.style.removeProperty('--initial-transform');
+                    document.documentElement.style.removeProperty('--initial-opacity');
+                    document.documentElement.style.removeProperty('--initial-visibility');
+                }, 1500);
+            }
+        } catch (e) {
+            // If anything fails, ensure page is visible
+            console.error('Transition setup error:', e);
+        }
+    })();
+</script>
+</head>
+<body>
+    <!-- Skip to main content link for keyboard users -->
+    <a href="#main-content" class="skip-link">Skip to main content</a>
+
+    <!-- Navigation -->
+    <nav class="main-nav" aria-label="Main navigation">
+        <div class="nav-container">
+            <a href="#hero" class="logo" aria-label="Fiona Cowie - Go to top">FC</a>
+            
+            <!-- Desktop Navigation -->
+            <ul class="nav-menu desktop-nav" role="list">
+                <li><a href="#play" class="nav-link" data-section="play" data-text="Play">Play</a></li>
+                <li><a href="#case-studies" class="nav-link" data-section="case-studies" data-text="Case studies">Case studies</a></li>
+                <li><a href="#about" class="nav-link" data-section="about" data-text="About me">About me</a></li>
+            </ul>
+
+            <!-- Mobile Navigation Toggle -->
+            <button class="mobile-nav-toggle" aria-expanded="false" aria-controls="mobile-nav" aria-label="Toggle mobile navigation">
+                <span class="hamburger-line"></span>
+                <span class="hamburger-line"></span>
+                <span class="hamburger-line"></span>
+            </button>
+
+            <!-- Mobile Navigation Menu -->
+            <ul class="nav-menu mobile-nav" id="mobile-nav" role="list">
+                <li><a href="#play" class="nav-link" data-section="play" data-text="Play">Play</a></li>
+                <li><a href="#case-studies" class="nav-link" data-section="case-studies" data-text="Case studies">Case studies</a></li>
+                <li><a href="#about" class="nav-link" data-section="about" data-text="About me">About me</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <main id="main-content">
+        <!-- Hero Section -->
+        <section id="hero" class="hero" aria-labelledby="hero-title">
+            <div class="container">
+                <div class="hero-content">
+                    <div class="hero-image">
+                        <img src="images/home-hero.png" alt="Stylised head silhouette filled with images symbolising my creative journey, including design tools, sunburst and speech bubbles in blue, coral and pink tones. Includes handwritten text that reads'craft with purpose', 'journey with curiosity' and 'design with delight'.">
+                    </div>
+                    <div class="hero-text">
+                        <h1 id="hero-title" class="hero-title">HELLO</h1>
+                        <p class="hero-paragraph">I'm Fiona, a product designer crafting thoughtful, purpose-driven digital experiences. I design with curiosity, helping teams <strong>bring ideas to life</strong> from concept to launch.</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Stylistic Divider -->
+            <div class="stylistic-divider" aria-hidden="true">
+                <div class="divider-icon"></div>
+                <div class="divider-line"></div>
+            </div>
+        </section>
+
+        <!-- Play Section -->
+        <section id="play" class="play" aria-labelledby="play-title">
+            <div class="container">
+                <h2 id="play-title" class="section-title">PLAY</h2>
+
+                <div class="play-cards">
+                    <!-- Postcard from Edinburgh (built by postcard.js, styled by postcard.css) -->
+                    <article class="pc-card" aria-labelledby="pc-title">
+                        <div class="pc-head">
+                            <p class="pc-label">Postcard from Edinburgh</p>
+                            <h3 id="pc-title" class="pc-title">Type a message and share</h3>
+                        </div>
+                        <div class="pc-body" data-postcard></div>
+                    </article>
+                </div>
+            </div>
+
+            <!-- Stylistic Divider -->
+            <div class="stylistic-divider" aria-hidden="true">
+                <div class="divider-icon"></div>
+                <div class="divider-line"></div>
+            </div>
+        </section>
+
+        <!-- Case Studies Section -->
+        <section id="case-studies" class="case-studies" aria-labelledby="case-studies-title">
+            <div class="container">
+                <h2 id="case-studies-title" class="section-title">CASE STUDIES</h2>
+                
+                <div class="case-study-cards">
+                    <article class="case-study-card" data-gradient="peach-blue">
+                        <a href="case-study-1.html" class="card-link">
+                            <div class="card-image">
+                                <img src="images/cs1-cover-lg.png" alt="Illustration of planet Earth in blue and coral tones with digital advertising icons reading 'Shop!', 'Sale' and 'Buy now!' floating around it.">
+                            </div>
+                            <div class="card-content">
+                                <h3 class="case-study-title"> Designing Good-Loop's first carbon measurement platform: <br><strong>from what if to action →</strong> </h3>
+                            </div>
+                        </a>
+                    </article>
+
+                    <article class="case-study-card" data-gradient="pink-coral">
+                        <a href="case-study-2.html" class="card-link">
+                            <div class="card-image">
+                                <img src="images/cs2-cover-lg.png" alt="Collage illustration in black and pink tones showing bold branding elements and a paint roller revealing a list of complex numbers">
+                            </div>
+                            <div class="card-content">
+                                <h3 class="case-study-title"> Reinventing Good-Loop's carbon measurement platform: <br><strong>a complete product redesign →</strong> </h3>
+                            </div>
+                        </a>
+                    </article>
+                </div>
+            </div>
+
+            <!-- Stylistic Divider -->
+            <div class="stylistic-divider" aria-hidden="true">
+                <div class="divider-icon"></div>
+                <div class="divider-line"></div>
+            </div>
+        </section>
+
+        <!-- About Section -->
+        <section id="about" class="about" aria-labelledby="about-title">
+            <div class="container">
+                <h2 id="about-title" class="section-title">ABOUT ME</h2>
+                
+                <div class="about-cards">
+                    <article class="standard-card">
+                        <div class="card-image">
+                            <img src="images/aboutme-profile.png" alt="Photo of me smiling while working at my desk with design tools and a laptop">
+                        </div>
+                        <div class="card-content">
+                            <h3 class="subsection-title">My journey into product design</h3>
+                            <p class="body-text">I've journeyed into product design from a background in jewellery design, retail display and running a side business creating and selling my illustrations. Drawing on these experiences, I take a holistic approach that blends aesthetics, design psychology, and strategic thinking. This helps me create designs that balance user needs with business goals, while also honing in on the details that elevate a product and spark joy.</p>
+                        </div>
+                    </article>
+
+                    <article id="contact" class="standard-card">
+                        <div class="card-image">
+                            <img src="images/aboutme-pencil.png" alt="Drawing of a hand-sharpened pencil pointing towards a heart in warm coral tones.">
+                        </div>
+                        <div class="card-content">
+                            <h3 class="subsection-title">Let's work together!</h3>
+                            <p class="body-text">I love bringing ideas to life on projects that have a positive impact on people's lives and the world around us. From crafting details that make you smile to collaborating on game-changing products, I believe in design that makes a difference.</p>
+                            <p class="body-text">I'd love to connect and explore ideas together ✨</p>
+                            <a href="mailto:fionajcowie@gmail.com" class="cta-button">GET IN TOUCH</a>
+                        </div>
+                    </article>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer" role="contentinfo">
+        <div class="container">
+            <div class="footer-content">
+                <p class="footer-contact">
+    <strong>Keep in touch</strong><br>
+    <a href="mailto:fionajcowie@gmail.com">fionajcowie@gmail.com</a> | 
+    <a href="https://www.linkedin.com/in/fionajcowie" target="_blank" rel="noopener noreferrer" aria-label="LinkedIn Profile">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" style="vertical-align: middle;">
+            <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
+        </svg>
+    </a>
+</p>
+                <p class="footer-copyright">
+                    Design, content and illustrations<br>
+                    © Fiona Cowie 2025
+                </p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="script.js"></script>
+    <script src="postcard.js" defer></script>
+</body>
+</html>
