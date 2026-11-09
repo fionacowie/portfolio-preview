@@ -243,7 +243,8 @@
     isolation: isolate;
     overflow: hidden;
     width: 140px;
-    height: 48px;
+    height: 40px;                 /* the same height as the sky buttons */
+    margin-top: 4px;              /* centred on the field, like the sky buttons */
     box-sizing: border-box;
     border-radius: 999px;
     display: flex;
@@ -255,7 +256,7 @@
     color: var(--pc-ink);
     font-family: inherit;
     font-weight: 700;
-    font-size: 15px;
+    font-size: 14px;
     text-transform: uppercase;
     letter-spacing: 0.05em;
     transition: all 0.3s ease;
@@ -273,7 +274,7 @@
 }
 
 .pc-share:hover { background: var(--pc-hover); box-shadow: 0 0 0 var(--pc-grow) var(--pc-ink); transform: scale(1.02); }
-.pc-share svg { width: 18px; height: 18px; flex: none; }
+.pc-share svg { width: 16px; height: 16px; flex: none; }
 .pc-share[aria-busy="true"] { cursor: progress; }
 
 :is(.pc-swatch, .pc-send, .pc-share, .pc-btn):focus-visible { outline: 2px solid var(--pc-focus); outline-offset: 2px; }
