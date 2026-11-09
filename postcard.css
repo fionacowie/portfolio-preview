@@ -49,6 +49,8 @@
 }
 
 /* sized like the rest of the home page: label as the case-study meta text, title as the About card headings */
+.pc-head { text-align: center; }
+
 .pc-label {
     font-size: clamp(16px, 1.39vw, 20px);
     line-height: 1.4;
@@ -233,26 +235,45 @@
     white-space: nowrap;
 }
 
-/* the share button: the round back-home button from the case studies */
+/* the Share button: a pill as wide as the three sky buttons (3 × 40 + 2 × 10), so the field sits centred between them */
 .pc-share {
     all: unset;
     cursor: pointer;
     position: relative;
-    width: 48px;
+    isolation: isolate;
+    overflow: hidden;
+    width: 140px;
     height: 48px;
     box-sizing: border-box;
-    border-radius: 50%;
-    display: grid;
-    place-items: center;
-    background: rgba(251, 249, 245, 0.9);
+    border-radius: 999px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    background: var(--pc-chip);
     border: var(--pc-edge) solid var(--pc-ink);
     color: var(--pc-ink);
+    font-family: inherit;
+    font-weight: 700;
+    font-size: 15px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
     transition: all 0.3s ease;
 }
 
+/* fills from the left while the video is being made */
+.pc-share::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background: var(--pc-hover);
+    transform-origin: left center;
+    transform: scaleX(var(--pc-p, 0));
+}
+
 .pc-share:hover { background: var(--pc-hover); box-shadow: 0 0 0 var(--pc-grow) var(--pc-ink); transform: scale(1.02); }
-.pc-share svg { width: 20px; height: 20px; }
-.pc-share .pc-ring { position: absolute; inset: -6px; width: 56px; height: 56px; transform: rotate(-90deg); pointer-events: none; }
+.pc-share svg { width: 18px; height: 18px; flex: none; }
 .pc-share[aria-busy="true"] { cursor: progress; }
 
 :is(.pc-swatch, .pc-send, .pc-share, .pc-btn):focus-visible { outline: 2px solid var(--pc-focus); outline-offset: 2px; }
@@ -268,8 +289,9 @@
 
 /* ---------- phones: a portrait postcard ---------- */
 @media (max-width: 600px) {
-    .pc-postcard { aspect-ratio: 2 / 3; width: 100%; }
+    .pc-postcard { aspect-ratio: var(--pc-phone-ratio, 3 / 4); width: 100%; } /* crop C, chosen 9 Nov */
     .pc-field { flex: 1 1 100%; order: 3; width: 100%; }
+    .pc-controls { justify-content: space-between; }
 }
 
 /* ---------- buttons in the sheet and the shared view: the site's CTA style ---------- */

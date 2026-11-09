@@ -34,7 +34,10 @@
     lowStars: { on: true, count: 150 },
     // 3:2 on desktop (all of Fiona's drawing plus a little sky), 2:3 on phones (trimmed round the Old Town)
     // letterPx: smallest capital height on screen, [landscape postcard, portrait (phone) postcard]
-    view: { crop: 'city', skyTop: 37, maxHeight: 1152, belowDetail: 18, narrowGround: 1, letterPx: [20, 16], spiral: true },
+    // Phones (portrait): focusX centres the crop (artboard x); skylineScale enlarges just the skyline, anchored at the
+    // bottom of the drawing around focusX, so the buildings read larger while the sky keeps its framing.
+    view: { crop: 'city', skyTop: 37, maxHeight: 1152, belowDetail: 18, narrowGround: 1, letterPx: [20, 16], spiral: true,
+            focusX: 760, skylineScale: 1.6 },   // chosen 9 Nov: crop C (3:4), Calton Hill's monument on the left, the castle-side flag in full
     // pale light low behind the buildings: a wide soft ellipse centred on the city, just above the roofs (artboard units)
     paleGlow: { on: true, amount: .45, size: 210, whiten: .15, x: 800, y: 900, rx: 980 },
     // the three round buttons (chosen 6 Nov). Shared links carry only the button number, so change colours here.
@@ -156,9 +159,8 @@
         </div>
         <div class="pc-help pc-quiet" id="pc-help"><span>${COPY.help}</span><span class="pc-count"></span></div>
       </div>
-      <button type="button" class="pc-share" aria-label="Share your postcard" title="Share">
-        ${ICON_SHARE}
-        <svg class="pc-ring" viewBox="0 0 50 50" aria-hidden="true"><circle cx="25" cy="25" r="23" fill="none" stroke="#141414" stroke-width="2.5" stroke-dasharray="144.5" stroke-dashoffset="144.5"/></svg>
+      <button type="button" class="pc-share" aria-label="Share your postcard">
+        ${ICON_SHARE}<span class="pc-share-label">Share</span>
       </button>
     </form>
     <div class="pc-viewer-bar">
@@ -193,7 +195,7 @@
   const $ = s => mount.querySelector(s), $s = s => sheet.querySelector(s);
   const el = {
     postcard: $('.pc-postcard'), form: $('.pc-controls'), swatches: $('.pc-swatches'), input: $('#pc-msg'), send: $('.pc-send'),
-    help: $('.pc-help'), count: $('.pc-count'), share: $('.pc-share'), ring: $('.pc-ring circle'), own: $('.pc-own'),
+    help: $('.pc-help'), count: $('.pc-count'), share: $('.pc-share'), own: $('.pc-own'),
     link: $s('.pc-link'), copy: $s('.pc-copy'), linkNote: $s('.pc-link-note'), media: $s('.pc-sheet-media'),
     close: $s('.pc-close'), shareVideo: $s('.pc-share-video'), save: $s('.pc-save'), videoNote: $s('.pc-video-note')
   };
@@ -262,7 +264,20 @@
     const layer = { base: q('.pc-base'), lift: q('.pc-lift'), pale: q('.pc-pale'), dark: q('.pc-dark') };
     const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
     const DPR_CAP = 2;
-    const skyline = new Path2D(SKYLINE);
+    let skyline = new Path2D(SKYLINE), skyTop = 377, skyS = 1, skyCx = 0;
+    // the skyline enlarged by s around (cx, 982): rewrites the path (all absolute M L C H V Z), so every use follows
+    const ys = y => 982 + (y - 982) * skyS, xs = x => skyCx + (x - skyCx) * skyS;
+    function scaleSkyline(sc, cx){
+      skyS = sc; skyCx = cx;
+      let cmd = '', n = 0;
+      const d = SKYLINE.replace(/([MLCHVZ])|(-?\d*\.?\d+(?:e-?\d+)?)/g, (m, c, num) => {
+        if (c){ cmd = c; n = 0; return c; }
+        const v = +num, isY = cmd === 'V' || (cmd !== 'H' && n % 2 === 1); n++;
+        return ' ' + (isY ? ys(v) : xs(v)).toFixed(2);
+      });
+      skyline = new Path2D(d); q('#pc-skyline').setAttribute('d', d);
+      skyTop = ys(377) - 1; roof = makeRoof();
+    }
     const hit = document.createElement('canvas').getContext('2d');
 
     // the circle the words and trails follow. Fiona's composition (…0 values) is used whenever it fits; on narrow
@@ -280,7 +295,7 @@
     const at0 = (a, r) => [CX0 + r * Math.cos(rad(a)), CY0 + r * Math.sin(rad(a))];
     const smooth = x => { x = Math.min(1, Math.max(0, x)); return x * x * (3 - 2 * x); };
     // nothing of the skyline is above y 378, so most points skip the (slow) exact test
-    const onSkyline = (x, y) => y >= 377 && hit.isPointInPath(skyline, x, y);
+    const onSkyline = (x, y) => y >= skyTop && hit.isPointInPath(skyline, x, y);
 
     /* ---------- glow round the skyline: blurred once per size at 1/8 resolution ---------- */
     let PAL = toPal(SKY.palettes[0]);
@@ -425,14 +440,16 @@
     let scale = 1, dpr = 1, V = { x: 0, y: 0, w: W, h: H, k: 1 }, shown = stars, started = false;
     const FOCUS = { hill: 360, city: 810 };
     // rooftop profile of the skyline (first solid point from the top, every 2 units), for "lowest detail in view"
-    const XL = -237, XR = 1798, roof = (() => {
-      const c = document.createElement('canvas'), w = Math.ceil((XR - XL) / 2), h = 550; c.width = w; c.height = h;
-      const g = c.getContext('2d'); g.setTransform(.5, 0, 0, .5, -XL / 2, -150); g.fill(skyline);
+    const XL = -237, XR = 1798;
+    function makeRoof(){
+      const y0 = Math.min(300, Math.floor(skyTop / 2) * 2 - 10), c = document.createElement('canvas'), w = Math.ceil((XR - XL) / 2), h = Math.ceil((1400 - y0) / 2); c.width = w; c.height = h;
+      const g = c.getContext('2d'); g.setTransform(.5, 0, 0, .5, -XL / 2, -y0 / 2); g.fill(skyline);
       const d = g.getImageData(0, 0, w, h).data, out = new Float32Array(w);
-      for (let i = 0; i < w; i++){ let j = 0; while (j < h && d[(j * w + i) * 4 + 3] < 128) j++; out[i] = 300 + j * 2; }
+      for (let i = 0; i < w; i++){ let j = 0; while (j < h && d[(j * w + i) * 4 + 3] < 128) j++; out[i] = y0 + j * 2; }
       return out;
-    })();
-    const belowRoof = (x, y) => { const i = Math.round((x - XL) / 2); return y >= (i < 0 ? 378 : i >= roof.length ? 661 : roof[i]); };
+    }
+    let roof = makeRoof();
+    const belowRoof = (x, y) => { const i = Math.round((x - XL) / 2); return y >= (i < 0 ? ys(378) : i >= roof.length ? ys(661) : roof[i]); };
     const lowestRoof = (x0, x1) => { let m = 0; for (let i = Math.max(0, Math.floor((x0 - XL) / 2)); i <= Math.min(roof.length - 1, Math.ceil((x1 - XL) / 2)); i++) m = Math.max(m, roof[i]); return m; };
     // which part of the artboard the postcard shows: bottom pinned, never stretched
     function view(bw, bh){
@@ -442,7 +459,7 @@
       if (vh >= full){
         if (vh > S.maxHeight){
           vh = S.maxHeight; vw = vh * a;
-          x = Math.min(W - vw, Math.max(0, (FOCUS[S.crop] ?? FOCUS.hill) - vw / 2));
+          x = Math.min(W - vw, Math.max(0, (S.focusX ?? FOCUS[S.crop] ?? FOCUS.hill) - vw / 2));
         }
         const u = Math.min(1, Math.max(0, (W - vw) / 300)), drop = (H - bottomFor(x, x + vw)) * u * u * (3 - 2 * u) * (1 - S.narrowGround);
         y = H - drop - vh;
@@ -487,6 +504,8 @@
     function size(){
       const b = root.getBoundingClientRect(); if (!b.width || !b.height) return;
       dpr = Math.min(DPR_CAP, window.devicePixelRatio || 1);
+      const S = SKY.view, wantS = b.width < b.height ? (S.skylineScale || 1) : 1, wantCx = S.focusX ?? FOCUS[S.crop] ?? 810;
+      if (wantS !== skyS || (wantS !== 1 && wantCx !== skyCx)){ scaleSkyline(wantS, wantCx); bgDone = false; fitIn = ''; }
       V = view(b.width, b.height);
       cv.width = fly.width = flyOff.width = Math.round(b.width * dpr); cv.height = fly.height = flyOff.height = Math.round(b.height * dpr); flyBoxes = [];
       scale = cv.width / V.w;
@@ -1051,7 +1070,18 @@
       const t = input.value.trim(); if (!t){ input.focus(); return; }
       el.send.classList.remove('pc-sent'); void el.send.offsetWidth; el.send.classList.add('pc-sent');
       P.write(t); sent = true; el.help.classList.add('pc-quiet'); el.count.textContent = '';
+      // phones: put the keyboard away and bring the postcard back into view to watch the star write it
+      // (the star's run-up gives the scroll time to finish)
+      if (matchMedia('(pointer: coarse)').matches) document.activeElement?.blur();
+      setTimeout(showPostcard, matchMedia('(pointer: coarse)').matches ? 250 : 0);
     });
+    function showPostcard(){
+      const r = el.postcard.getBoundingClientRect(), vh = window.visualViewport ? visualViewport.height : innerHeight;
+      if (r.top >= 0 && r.bottom <= vh) return;                       // already fully in view
+      const bar = document.querySelector('.main-nav'), gap = (bar ? bar.offsetHeight : 0) + 12;
+      const top = Math.max(0, r.top + scrollY - (r.height + gap < vh ? Math.max(gap, (vh - r.height) / 2) : gap));
+      scrollTo({ top, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+    }
     syncField();
     // no replay while someone is typing or the share window is open
     P.canReplay = () => document.activeElement !== input && sheet.hidden;
@@ -1079,7 +1109,8 @@
       el.videoNote.textContent = `${video.ext.toUpperCase()} · ${(video.blob.size / 1048576).toFixed(1)} MB`;
       setVideoButtons(true);
     };
-    const setRing = p => el.ring.setAttribute('stroke-dashoffset', (144.5 * (1 - p)).toFixed(1));
+    // while the video is being made, the Share button fills up from the left
+    const setRing = p => el.share.style.setProperty('--pc-p', p.toFixed(3));
     el.share.addEventListener('click', async () => {
       el.link.value = shareLink(); el.copy.textContent = 'Copy link';
       el.linkNote.textContent = '';
