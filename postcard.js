@@ -37,7 +37,7 @@
     // Phones (portrait): focusX centres the crop (artboard x); skylineScale enlarges just the skyline, anchored at the
     // bottom of the drawing around focusX, so the buildings read larger while the sky keeps its framing.
     view: { crop: 'city', skyTop: 37, maxHeight: 1152, belowDetail: 18, narrowGround: 1, letterPx: [20, 16], spiral: true,
-            focusX: 760, skylineScale: 1.6 },   // chosen 9 Nov: crop C (3:4), Calton Hill's monument on the left, the castle-side flag in full
+            focusX: 827, skylineScale: 1.6 },   // chosen 9 Nov: crop C (3:4), skyline 1.6×, the Old Town group centred under the lettering
     // pale light low behind the buildings: a wide soft ellipse centred on the city, just above the roofs (artboard units)
     paleGlow: { on: true, amount: .45, size: 210, whiten: .15, x: 800, y: 900, rx: 980 },
     // the three round buttons (chosen 6 Nov). Shared links carry only the button number, so change colours here.
@@ -488,12 +488,28 @@
       q('#pc-land').setAttribute('fill', rgb(PAL.land)); q('#pc-sky-dark-stop').setAttribute('stop-color', rgb(PAL.dark));
     }
     // keep the Moon in the sky (and off the words) when the sides are trimmed
+    // the Moon: Fiona's spot when it's in view and clear of the words; otherwise (phones) the quietest patch of sky,
+    // fewest stars within 60 units, leaning higher up and to the left as in her drawing
+    let moonAt = [180, 360];
     function placeMoon(){
-      const mx = 180, my = 360, L = V.x + Math.min(.16 * V.w, 150), Rt = V.x + V.w - Math.min(.16 * V.w, 150), top = Math.max(my - 160, V.y + 90);
-      const spots = [[mx, my], [L, my], [L, top], [Rt, top], [Rt, my], [V.x + V.w / 2, top]];
+      const mx = 180, my = 360;
       const free = ([x, y]) => x > V.x + 40 && x < V.x + V.w - 40 && y > V.y + 40 && !onSkyline(x, y + 30)
         && !(Math.abs(Math.hypot(x - CX, y - CY) - (R_BASE + CAP / 2)) < CAP + 75 && Math.atan2(y - CY, x - CX) * 180 / Math.PI > TEXT_START - D(8) && Math.atan2(y - CY, x - CX) * 180 / Math.PI < WEND + D(4));
-      const [x, y] = spots.find(free) || spots[1];
+      let x = mx, y = my;
+      if (!free([mx, my])){
+        const mg = Math.max(60, .1 * V.w), near = stars.filter(s => s.low === undefined && s.x > V.x - 60 && s.x < V.x + V.w + 60 && s.y > V.y - 60 && s.y < V.y + V.h * .6);
+        let best = null;
+        for (let cy = V.y + V.h * .14; cy <= V.y + V.h * .45; cy += 20)
+          for (let cx = V.x + mg; cx <= V.x + V.w - mg; cx += 20){
+            if (!free([cx, cy])) continue;
+            let n = 0;
+            for (const st of near){ const dx = st.x - cx, dy = st.y - cy; if (dx * dx + dy * dy < 3600) n += st.faint ? .3 : 1 + st.r * .3; }
+            const score = n + (cy - V.y) / V.h * 3 + (cx - V.x) / V.w * 2;
+            if (!best || score < best.s) best = { s: score, x: cx, y: cy };
+          }
+        if (best){ x = best.x; y = best.y; }
+      }
+      moonAt = [x, y];
       moonEl.setAttribute('transform', x === mx && y === my ? '' : `translate(${(x - mx).toFixed(1)} ${(y - my).toFixed(1)})`);
     }
     function nearWords(x, y){
@@ -517,7 +533,8 @@
       const changed = fitCircle();
       placeMoon();
       const m = 12;
-      shown = stars.filter(s => s.x > V.x - m && s.x < V.x + V.w + m && s.y > V.y - m && s.y < V.y + V.h + m && !nearWords(s.x, s.y));
+      shown = stars.filter(s => s.x > V.x - m && s.x < V.x + V.w + m && s.y > V.y - m && s.y < V.y + V.h + m && !nearWords(s.x, s.y)
+        && Math.hypot(s.x - moonAt[0], s.y - moonAt[1]) > 20);                 // nothing peeking out from behind the Moon
       drawStars(performance.now());
       clearTimeout(bgTimer);
       if (!bgDone){ drawGlow(); drawBand(); bgDone = true; } else bgTimer = setTimeout(() => { drawGlow(); drawBand(); }, 120);
