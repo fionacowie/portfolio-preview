@@ -19,13 +19,20 @@
 /* Its two colours are set by postcard.js (they follow the sky choice) and crossfade here */
 @property --pc-bg1 { syntax: '<color>'; inherits: false; initial-value: #CFEDEB; }
 @property --pc-bg2 { syntax: '<color>'; inherits: false; initial-value: #6AA8F7; }
+/* a registered length, so a calc() strip (the received view's) reaches postcard.js as plain pixels */
+@property --pc-strip { syntax: '<length>'; inherits: true; initial-value: 0px; }
 
+/* A full-width band: it runs edge to edge of the window, whatever container it sits in */
 .pc-card {
+    --pc-strip: 0px;                       /* dark ground under the skyline for the controls (big screens, below) */
+    --pc-side: clamp(16px, 4vw, 64px);
     position: relative;
     isolation: isolate;
     display: grid;
     gap: clamp(20px, 3vw, 32px);
-    padding: clamp(24px, 3.5vw, 40px) clamp(16px, 4.5vw, 44px) clamp(28px, 3.5vw, 40px);
+    width: 100vw;
+    margin-left: calc(50% - 50vw);
+    padding: clamp(24px, 3.5vw, 40px) var(--pc-side) clamp(28px, 3.5vw, 40px);
     background: linear-gradient(135deg, var(--pc-bg1), var(--pc-bg2));
     transition: --pc-bg1 1.2s ease, --pc-bg2 1.2s ease;
 }
@@ -76,7 +83,7 @@
     aspect-ratio: 3 / 2;
     position: relative;
     overflow: hidden;
-    border-radius: 6px;
+    border-radius: 10px;
     background: var(--pc-night);
     isolation: isolate;
     contain: layout paint;
@@ -97,7 +104,7 @@
 
 .pc-lift { opacity: 0.2; }
 .pc-dark { mix-blend-mode: multiply; }
-.pc-glow, .pc-fly, .pc-dark, .pc-grain { pointer-events: none; }
+.pc-glow, .pc-fly, .pc-dark, .pc-grain, .pc-flecks, .pc-twinkle { pointer-events: none; }
 .pc-grain { mix-blend-mode: soft-light; background-repeat: repeat; }
 .pc-art text { font-family: "Flamenco", Georgia, serif; font-weight: 300; }
 
@@ -106,7 +113,7 @@
 .pc-postcard > .pc-credit {
     position: absolute;
     right: 12px;
-    bottom: 10px;
+    bottom: calc(var(--pc-strip) + 10px);   /* narrow postcards: just above the controls' strip */
     z-index: 1;
     margin: 0;
     font-size: clamp(9px, 1.3cqw, 12px);
@@ -120,6 +127,10 @@
     pointer-events: none;
 }
 .pc-postcard > .pc-credit[hidden] { display: none; }
+/* wide postcards: in line with the controls, in the strip's bottom-right corner (10px up when there is no strip) */
+@container (min-width: 1080px) {
+    .pc-postcard > .pc-credit { right: 24px; bottom: max(10px, calc(var(--pc-strip) / 2 - 0.5em)); }
+}
 .pc-postcard.pc-recording { cursor: progress; }
 
 /* ---------- controls under the postcard ---------- */
@@ -279,47 +290,145 @@
 
 :is(.pc-swatch, .pc-send, .pc-share, .pc-btn):focus-visible { outline: 2px solid var(--pc-focus); outline-offset: 2px; }
 
-/* ---------- laptops: title, postcard and controls all fit on one screen ---------- */
+/* ---------- size: as large as the screen allows ---------- */
+.pc-card {
+    --pc-w: calc(100vw - 2 * var(--pc-side));
+    --pc-strip: 130px;                     /* phones: two rows of controls on the ground */
+}
+.pc-postcard {
+    width: var(--pc-w);
+    height: calc(var(--pc-w) / var(--pc-phone-ratio, 0.75) + var(--pc-strip));   /* phones: 3:4 sky + the strip */
+    aspect-ratio: auto;
+}
 @media (min-width: 601px) {
-    .pc-postcard,
-    .pc-controls {
-        width: min(100%, 840px, calc((100svh - 290px) * 1.5));
+    /* As large as fits, but never wider than 1200px, and the sky never wider than 2 : 1 (so it stays a postcard,
+       not a letterbox); on a big screen the sky is about 1.75 : 1 */
+    .pc-card {
+        --pc-strip: 88px;                  /* postcard.js reads this and adds that much ground below the skyline */
+        --pc-room: 200px;                  /* heading + the card's padding, so heading and postcard fit one screen */
+        --pc-w: max(min(calc(100vw - 2 * var(--pc-side)), 1200px, calc((100svh - var(--pc-room) - var(--pc-strip)) * 2)),
+                    min(calc(100vw - 2 * var(--pc-side)), 560px));
     }
-    .pc-controls { min-width: min(100%, 560px); }
+    .pc-postcard { height: min(calc(var(--pc-w) / 1.75 + var(--pc-strip)), max(calc(100svh - var(--pc-room)), 380px)); }
 }
 
-/* ---------- phones: a portrait postcard ---------- */
+/* ---------- the controls sit on the postcard's dark ground, centred in the strip ---------- */
+.pc-body > .pc-postcard,
+.pc-body > .pc-controls { grid-area: 1 / 1; }
+.pc-body > .pc-controls {
+    z-index: 2;
+    align-self: end;
+    align-items: center;
+    width: calc(var(--pc-w) - 32px);
+    margin-bottom: 18px;
+    row-gap: 10px;
+}
+.pc-swatches, .pc-share { margin-top: 0; }
+.pc-field { position: relative; }
+
+/* night glass: light, translucent controls that sit in the night rather than on top of it */
+.pc-field-row {
+    height: 44px;                          /* phones: a comfortable finger-sized target */
+    padding: 0 4px 0 18px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.5);
+}
+.pc-field-row:hover { box-shadow: none; border-color: rgba(255, 255, 255, 0.9); }
+.pc-field-row input { color: #fff; }
+.pc-field-row input::placeholder { color: rgba(255, 255, 255, 0.62); }
+.pc-send { width: 34px; height: 34px; background: #fff; color: #0A1F3A; border: 0; }
+.pc-send:disabled { background: rgba(255, 255, 255, 0.16); color: rgba(255, 255, 255, 0.55); }
+.pc-send:not(:disabled):hover { background: var(--pc-sky-hi, var(--pc-hover)); color: #0A1F3A; transform: scale(1.04); }
+.pc-share {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    color: #fff;
+}
+.pc-share:hover { background: var(--pc-sky-hi, var(--pc-hover)); border-color: transparent; color: #0A1F3A; box-shadow: none; }
+.pc-body > .pc-controls .pc-share[aria-busy="true"] { background: rgba(255, 255, 255, 0.82); color: #0A1F3A; border-color: transparent; }
+.pc-body > .pc-controls .pc-swatch { box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.5); }
+.pc-body > .pc-controls .pc-swatch:hover { box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.9); }
+.pc-body > .pc-controls .pc-swatch[aria-pressed="true"] { box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.5), 0 0 0 3px #0A1F3A, 0 0 0 5px #fff; }
+
+/* focus on the night ground: a white ring (the site's coral ring stays everywhere else) */
+.pc-body > .pc-controls .pc-swatch:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
+/* the field and SHARE: their own edge turns solid white and 2px (one clean line, no gap and no second ring) */
+.pc-body > .pc-controls .pc-field-row:focus-within,
+.pc-body > .pc-controls .pc-share:focus-visible { outline: none; border-color: #fff; box-shadow: inset 0 0 0 1px #fff; background: rgba(255, 255, 255, 0.16); }
+.pc-body > .pc-controls .pc-send:focus-visible { outline: 2px solid #fff; outline-offset: 1px; }
+.pc-body > .pc-controls .pc-share:focus-visible:hover { background: var(--pc-sky-hi, var(--pc-hover)); color: #0A1F3A; }
+
+/* SHARE lights up in the chosen sky's own pastel (set by postcard.js), and fills with it while the video is made */
+.pc-body > .pc-controls .pc-share::before { background: var(--pc-sky-hi, var(--pc-hover)); }
+
+/* phones: sky buttons and SHARE on the first row, the field across the second; the hint is for screen readers only */
 @media (max-width: 600px) {
-    .pc-postcard { aspect-ratio: var(--pc-phone-ratio, 3 / 4); width: 100%; } /* crop C, chosen 9 Nov */
     .pc-field { flex: 1 1 100%; order: 3; width: 100%; }
-    .pc-controls { justify-content: space-between; }
+    .pc-body > .pc-controls { justify-content: space-between; }
+    .pc-help { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 }
 
-/* ---------- buttons in the sheet and the shared view: the site's CTA style ---------- */
+/* big screens: one row, 40px tall like the sky buttons; the hint hangs just under the field */
+@media (min-width: 601px) {
+    .pc-body > .pc-controls {
+        width: auto;
+        flex-wrap: nowrap;
+        margin-bottom: calc((var(--pc-strip) - 40px) / 2);
+    }
+    .pc-field { width: 420px; }
+    .pc-field-row { height: 40px; }
+    .pc-send { width: 30px; height: 30px; }
+    .pc-help { position: absolute; top: calc(100% + 3px); left: 0; right: 0; font-size: 13px; line-height: 1.2; color: rgba(255, 255, 255, 0.72); }
+}
+
+/* ---------- buttons in the share window and the received view: pills, like the postcard's controls ---------- */
 .pc-btn {
     all: unset;
-    cursor: pointer;
-    padding: 10px 20px;
-    background: var(--pc-chip);
-    border: clamp(2px, 0.21vw, 3px) solid var(--pc-ink);
+    box-sizing: border-box;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 40px;
+    padding: 0 22px;
+    border-radius: 999px;
+    background: transparent;
+    border: 1px solid #0A1F3A;
+    color: #0A1F3A;
     font-family: inherit;
     font-weight: 700;
     font-size: 15px;
     text-transform: uppercase;
     letter-spacing: 0.05em;
-    transition: all 0.3s ease;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: background 0.3s ease, border-color 0.3s ease, color 0.3s ease, transform 0.3s ease;
 }
-
-.pc-btn:not(:disabled):hover { background: var(--pc-hover); box-shadow: 0 0 0 var(--pc-grow) var(--pc-ink); transform: scale(1.02); }
+.pc-btn:not(:disabled):hover { background: var(--pc-sky-hi, var(--pc-hover)); border-color: #0A1F3A; color: #0A1F3A; transform: scale(1.02); }
+.pc-btn:focus-visible { outline: none; box-shadow: inset 0 0 0 1px #0A1F3A; }   /* the edge goes 2px: one clean line */
 .pc-btn:disabled { opacity: 0.4; cursor: default; }
 .pc-btn[hidden] { display: none; }
+/* the main action, and "Write your own" on the received view: the navy pill */
+.pc-btn.pc-save, .pc-btn.pc-share-video, a.pc-btn.pc-own { background: #0A1F3A; color: #fff; text-decoration: none; }
+.pc-btn.pc-save:focus-visible, .pc-btn.pc-share-video:focus-visible, a.pc-btn.pc-own:focus-visible { outline: 2px solid #0A1F3A; outline-offset: 3px; box-shadow: none; }
 
 /* ---------- shared view: someone opened a postcard link (postcard.html only) ---------- */
 .pc-viewer-bar { display: none; }
 .pc-card.pc-viewer .pc-head,
 .pc-card.pc-viewer .pc-controls { display: none; }
-.pc-card.pc-viewer { align-content: center; }
-.pc-card.pc-viewer .pc-postcard { width: min(100%, 920px); }
+.pc-card.pc-viewer { align-content: center; --pc-room: 290px; }
+/* The received postcard has a fixed shape whatever the window, with a band of dark ground under the skyline
+   (no controls on it). Phones: the 3:4 sky + ground, about 3:5. Laptops: 16:10, a 16:9 sky + ground. */
+.pc-card.pc-viewer { --pc-strip: calc(var(--pc-w) * 0.3); }
+.pc-card.pc-viewer .pc-postcard > .pc-credit { right: 16px; bottom: max(10px, calc(var(--pc-strip) / 2 - 0.5em)); }
+@media (min-width: 601px) {
+    .pc-card.pc-viewer {
+        --pc-w: max(min(calc(100vw - 2 * var(--pc-side)), 1200px, calc((100svh - var(--pc-room)) * 1.6)),
+                    min(calc(100vw - 2 * var(--pc-side)), 560px));
+        --pc-strip: calc(var(--pc-w) * 0.0625);
+    }
+    .pc-card.pc-viewer .pc-postcard { height: calc(var(--pc-w) / 1.6); }
+    .pc-card.pc-viewer .pc-postcard > .pc-credit { right: 20px; }
+}
 .pc-card.pc-viewer .pc-viewer-bar { display: grid; gap: 14px; justify-items: center; text-align: center; }
 .pc-viewer-bar p { font-size: clamp(18px, 1.6vw, 22px); }
 
@@ -336,8 +445,11 @@
     white-space: nowrap;
     transition: color 0.3s ease;
 }
+.pc-byline a { padding: 2px 8px; margin: -2px -8px; border-radius: 999px; transition: background 0.3s ease; }
+/* hover: the chosen sky's pastel behind the words, like SHARE (coral didn't read on the coloured band) */
 .pc-byline a:hover,
-.pc-byline a:focus { color: #FF542E; } /* the site's link hover */
+.pc-byline a:focus-visible { background: var(--pc-sky-hi, var(--pc-hover)); color: #0A1F3A; }
+.pc-byline a:focus-visible { outline: 2px solid #0A1F3A; outline-offset: 2px; }
 
 /* ---------- the share sheet ---------- */
 .pc-sheet {
@@ -361,7 +473,9 @@
     max-height: calc(100svh - 32px);
     overflow: auto;
     padding: clamp(18px, 3vw, 28px);
-    background: var(--pc-chip);
+    border-radius: 16px;
+    background: var(--pc-chip);            /* cream: easiest to read */
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.25);
 }
 
 .pc-sheet-card h3 { font-size: 18px; font-weight: 700; line-height: 1.3; }
@@ -369,28 +483,35 @@
 .pc-sheet-note { font-size: 13px; color: var(--pc-muted); }
 .pc-sheet-note:empty { display: none; }
 .pc-sheet-actions { display: flex; flex-wrap: wrap; gap: 10px; justify-content: flex-end; }
+.pc-sheet-card { grid-template-columns: minmax(0, 1fr); }   /* never wider than the screen: the link field shrinks instead */
+@media (max-width: 600px) {
+    .pc-sheet .pc-btn { padding: 0 16px; font-size: 14px; }
+    .pc-sheet-actions { justify-content: center; }
+}
 
 .pc-linkrow { display: flex; gap: 8px; }
 
 .pc-link {
     flex: 1;
     min-width: 0;
-    padding: 8px 12px;
-    border: var(--pc-edge) solid var(--pc-ink);
-    border-radius: 0;
+    height: 40px;
+    box-sizing: border-box;
+    padding: 0 16px;
+    border: 1px solid rgba(10, 31, 58, 0.45);
+    border-radius: 999px;
     background: #fff;
-    color: var(--pc-ink);
+    color: #0A1F3A;
     font-size: 14px;
 }
+.pc-link:focus-visible { outline: none; border-color: #0A1F3A; box-shadow: inset 0 0 0 1px #0A1F3A; }
 
 .pc-sheet-media {
     position: relative;
-    width: 100%;
-    max-height: 56svh;
+    width: min(100%, calc(52svh * var(--pc-arn, 1.5)));   /* exactly the video's shape: no bars round a portrait one */
     aspect-ratio: var(--pc-ar, 3 / 2);
-    margin: 0 auto;
+    margin: 0 auto 6px;                    /* a little more room above the buttons */
     overflow: hidden;
-    border-radius: 6px;
+    border-radius: 10px;
     background: var(--pc-night);
 }
 
@@ -424,7 +545,6 @@
     align-content: center;
     padding-top: calc(clamp(24px, 3.5vw, 40px) + 56px); /* room for the logo */
 }
-a.pc-btn { color: var(--pc-ink); text-decoration: none; }
 
 .pc-page-logo {
     position: absolute;
@@ -435,8 +555,7 @@ a.pc-btn { color: var(--pc-ink); text-decoration: none; }
 }
 
 @media (min-width: 601px) {
-    /* the logo row takes 56px more, so leave that much more room to keep everything on one laptop screen */
-    .pc-page .pc-postcard,
-    .pc-page .pc-controls { width: min(100%, 880px, calc((100svh - 300px) * 1.5)); }
-    .pc-page .pc-card.pc-viewer .pc-postcard { width: min(100%, 920px, calc((100svh - 340px) * 1.5)); }
+    /* the logo row and the byline take a little more room on this page */
+    .pc-page .pc-card { --pc-room: 220px; }
+    .pc-page .pc-card.pc-viewer { --pc-room: 290px; }
 }

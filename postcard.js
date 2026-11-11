@@ -28,6 +28,13 @@
     // the star writes the message again every time the postcard comes back into view after being completely out of
     // view, once at least half of it is showing. Never while someone is typing or sharing, never with reduced motion.
     replay:  { inView: .5 },
+    // A glitter postcard, after Fiona's Glitter pencil (soft round glints, never diamonds):
+    //  glitter: fine flecks in her pencil colours printed into the skyline (fainter in the sky), and flecks
+    //           all over the postcard catching the light now and then with a soft round twinkle
+    //  dust:    the writing star sheds a fine trail of the same twinkles that drift down and fade
+    // In the video too. With reduced motion the flecks stay, without the twinkle.
+    sparkle: { glitter: { on: true, flecks: .2, sky: 1.5, twinkle: 1, size: 1.65, fade: .8 },   // fade: how much the glitter softens from the top of the postcard to the bottom   // Fiona's settings, 11 Nov; sky is its own amount (.09 was the first look)
+               dust:    { on: true, rate: 55, life: 1.4, fall: 16, size: 1 } },
     grain:   { on: true, amount: .2, size: .5, roughness: 1 },
     milkyWay: { on: true, strength: .7 },
     tints:    { on: true, share: .33 },
@@ -36,7 +43,7 @@
     // letterPx: smallest capital height on screen, [landscape postcard, portrait (phone) postcard]
     // Phones (portrait): focusX centres the crop (artboard x); skylineScale enlarges just the skyline, anchored at the
     // bottom of the drawing around focusX, so the buildings read larger while the sky keeps its framing.
-    view: { crop: 'city', skyTop: 37, maxHeight: 1152, belowDetail: 18, narrowGround: 1, letterPx: [20, 16], spiral: true,
+    view: { crop: 'city', skyTop: -26, maxHeight: 1152, belowDetail: 18, narrowGround: 1, letterPx: [20, 16], spiral: true,
             focusX: 827, skylineScale: 1.6 },   // chosen 9 Nov: crop C (3:4), skyline 1.6×, the Old Town group centred under the lettering
     // pale light low behind the buildings: a wide soft ellipse centred on the city, just above the roofs (artboard units)
     paleGlow: { on: true, amount: .45, size: 210, whiten: .15, x: 800, y: 900, rx: 980 },
@@ -64,7 +71,7 @@
   };
 
   const COPY = {
-    placeholder: 'Type your own message in the sky',
+    placeholder: 'Type your own message in the sky…',
     help: 'Up to 40 characters',
     received: 'Someone sent you a postcard from Edinburgh',
     writeOwn: 'Write your own',
@@ -145,6 +152,8 @@
         <use href="#pc-skyline" fill="url(#pc-sky-dark-grad)" style="mix-blend-mode:multiply" mask="url(#pc-dark-fade)"/>
         <g id="pc-front"></g>
       </svg>
+      <canvas class="pc-layer pc-flecks" aria-hidden="true"></canvas>
+      <canvas class="pc-layer pc-twinkle" aria-hidden="true"></canvas>
       <canvas class="pc-layer pc-fly" aria-hidden="true"></canvas>
       <div class="pc-layer pc-grain" aria-hidden="true"></div>
       <p class="pc-credit">${CREDIT.text}</p>
@@ -218,6 +227,10 @@
     card.style.setProperty('--pc-grain', CARD.grain);
     card.style.setProperty('--pc-grain-size', CARD.grainSize + 'px');
     card.classList.toggle('pc-framed', CARD.frame);
+    // the sky's own pastel (its glow into its horizon), for the SHARE button's highlight
+    const p = SKY.palettes[i] || SKY.palettes[0];
+    card.style.setProperty('--pc-sky-hi', `linear-gradient(135deg, ${p.glow}, ${p.bottom})`);
+    sheet.style.setProperty('--pc-sky-hi', `linear-gradient(135deg, ${p.glow}, ${p.bottom})`);   // the share window's buttons too
   }
   (() => {
     const T = 256, c = document.createElement('canvas'); c.width = c.height = T;
@@ -234,7 +247,7 @@
   function applyCredit(){
     creditEl.textContent = CREDIT.text;
     creditEl.style.opacity = CREDIT.opacity;
-    creditEl.hidden = !(CREDIT.onScreen || (shareView && CREDIT.onSharePage));
+    creditEl.hidden = !(CREDIT.onScreen || (sharedText && CREDIT.onSharePage));   // the received postcard only: the write-your-own page has the byline
   }
   applyCredit();
 
@@ -245,7 +258,7 @@
   const idle = window.requestIdleCallback ? fn => requestIdleCallback(fn, { timeout: 300 }) : fn => setTimeout(fn, 0);
   function wake(){ if (P) return; P = engine(el.postcard); controls(P); }
   // for trying settings from the console or a playground page (nothing on the site uses it)
-  mount.postcard = { CARD, SKY, CREDIT, applyCard: () => applyCard(skyIndex), applyCredit, letters: px => P && P.letters(px) };
+  mount.postcard = { CARD, SKY, CREDIT, applyCard: () => applyCard(skyIndex), applyCredit, letters: px => P && P.letters(px), glitter: () => P && P.glitter() };
   if ('IntersectionObserver' in window){
     const io = new IntersectionObserver(es => { if (es.some(e => e.isIntersecting)){ io.disconnect(); idle(wake); } }, { rootMargin: '100% 0px' });
     io.observe(mount);
@@ -438,6 +451,27 @@
     (() => { const r = rng(5); stars.forEach(s => { if (r() < SKY.tints.share) s.tint = TINTS[Math.floor(r() * TINTS.length)]; }); })();
 
     let scale = 1, dpr = 1, V = { x: 0, y: 0, w: W, h: H, k: 1 }, shown = stars, started = false;
+    // the band of dark ground under the skyline that the controls sit on (big screens; set in CSS as --pc-strip)
+    const stripPx = () => parseFloat(getComputedStyle(root).getPropertyValue('--pc-strip')) || 0;
+    // wide postcards show the sky beside Fiona's frame: a seeded field there, made the first time it's needed
+    let sidesMade = false;
+    function makeSides(){
+      // Her own star field continued past the frame: stars near each edge mirrored outwards and shifted up, so the
+      // texture and density carry on with no visible join (and no recognisable mirror image)
+      sidesMade = true;
+      const extra = [];
+      for (const st of stars){
+        if (st.low !== undefined) continue;
+        for (const [near, mx] of [[st.x < 320, -st.x], [st.x > W - 320, 2 * W - st.x]]){
+          if (!near) continue;
+          const x = mx, y = st.y - 150;
+          if (onSkyline(x, y) || onSkyline(x, y + 6)) continue;
+          extra.push({ ...st, x, y, ph: (st.ph + .37) % 1 });
+        }
+      }
+      stars.push(...extra);
+    }
+
     const FOCUS = { hill: 360, city: 810 };
     // rooftop profile of the skyline (first solid point from the top, every 2 units), for "lowest detail in view"
     const XL = -237, XR = 1798;
@@ -519,11 +553,14 @@
     let bgTimer = 0, bgDone = false;
     function size(){
       const b = root.getBoundingClientRect(); if (!b.width || !b.height) return;
-      dpr = Math.min(DPR_CAP, window.devicePixelRatio || 1);
+      dpr = Math.min(b.width > 1100 ? 1.5 : DPR_CAP, window.devicePixelRatio || 1);   // big postcards: a little lighter
       const S = SKY.view, wantS = b.width < b.height ? (S.skylineScale || 1) : 1, wantCx = S.focusX ?? FOCUS[S.crop] ?? 810;
       if (wantS !== skyS || (wantS !== 1 && wantCx !== skyCx)){ scaleSkyline(wantS, wantCx); bgDone = false; fitIn = ''; }
-      V = view(b.width, b.height);
-      cv.width = fly.width = flyOff.width = Math.round(b.width * dpr); cv.height = fly.height = flyOff.height = Math.round(b.height * dpr); flyBoxes = [];
+      const strip = stripPx();
+      V = view(b.width, b.height - strip);
+      if (strip) V = { ...V, h: V.h + strip / V.k };                 // extra ground below for the controls
+      if (!sidesMade && (V.x < -2 || V.x + V.w > W + 2)) makeSides();
+      cv.width = fly.width = flyOff.width = twCv.width = Math.round(b.width * dpr); cv.height = fly.height = flyOff.height = twCv.height = Math.round(b.height * dpr); flyBoxes = [];
       scale = cv.width / V.w;
       art.setAttribute('viewBox', `${V.x.toFixed(2)} ${V.y.toFixed(2)} ${V.w.toFixed(2)} ${V.h.toFixed(2)}`);
       paintSky();
@@ -535,6 +572,7 @@
       const m = 12;
       shown = stars.filter(s => s.x > V.x - m && s.x < V.x + V.w + m && s.y > V.y - m && s.y < V.y + V.h + m && !nearWords(s.x, s.y)
         && Math.hypot(s.x - moonAt[0], s.y - moonAt[1]) > 20);                 // nothing peeking out from behind the Moon
+      makeFlecks();
       drawStars(performance.now());
       clearTimeout(bgTimer);
       if (!bgDone){ drawGlow(); drawBand(); bgDone = true; } else bgTimer = setTimeout(() => { drawGlow(); drawBand(); }, 120);
@@ -560,14 +598,100 @@
         ctx.globalAlpha = a;
         ctx.beginPath(); ctx.arc(s.x, s.y, Math.max(.2, s.r * (1 - s.shrink * m)), 0, 6.2832); ctx.fill();
       }
-      ctx.globalAlpha = 1;
+      if (!reduce) drawDust(now);
+      ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
       ctx.setTransform(1, 0, 0, 1, 0, 0);
+    }
+
+    /* ---------- glitter: flecks printed into the postcard, soft round twinkles, stardust ---------- */
+    const fleckCv = q('.pc-flecks'), twCv = q('.pc-twinkle'), twCtx = twCv.getContext('2d');
+    // soft round glints, as on the Glitter pencil: grain in the halo, a small solid core; five pale tints
+    const GLINT_TINTS = ['#FFFFFF', '#FFF3E0', '#E6F0FF', '#E2FCF3', '#FFE6F0'];
+    const glintSprites = GLINT_TINTS.map((c, n) => {
+      const S = 64, cvs = document.createElement('canvas'); cvs.width = cvs.height = S;
+      const g = cvs.getContext('2d'), [R, G, B] = hex(c), img = g.createImageData(S, S), r = rng(300 + n);
+      for (let j = 0; j < S; j++) for (let i = 0; i < S; i++){
+        const d = Math.hypot(i + .5 - S / 2, j + .5 - S / 2) / (S / 2), k = (j * S + i) * 4;
+        const halo = Math.max(0, 1 - d) ** 2.2 * .75 * (.35 + .65 * r()), core = d < .14 ? 1 : d < .2 ? (.2 - d) / .06 : 0;
+        img.data[k] = R; img.data[k+1] = G; img.data[k+2] = B; img.data[k+3] = Math.round(255 * Math.min(1, halo + core));
+      }
+      g.putImageData(img, 0, 0); return cvs;
+    });
+    const FLECK_INKS = ['#5B64EF', '#5B8BEF', '#B888F6', '#FF83FE', '#FFA59A', '#FFC800'];   // her Glitter pencil colours
+    let flecks = [], twinkles = [], twLast = 0, twCarry = 0, dust = [];
+    function makeFlecks(){
+      const Gl = SKY.sparkle.glitter, fc = fleckCv.getContext('2d');
+      fleckCv.width = cv.width; fleckCv.height = cv.height; flecks = [];
+      if (!Gl.on) return;
+      const r = rng(4711), w = fleckCv.width, h = fleckCv.height, d = dpr;
+      const most = Math.max(Gl.flecks, Gl.sky, .01), n = Math.round(w * h / (d * d) * .016 * most);   // 16 per 1000 css px² at 1, ground and sky set separately
+      // glitter on card is never even: soft patches where it gathers, like the Glitter pencil's drifts
+      const p1 = r() * 6.28, p2 = r() * 6.28, p3 = r() * 6.28, k = 1 / (scale * 90);
+      const patch = (x, y) => .55 + .45 * (Math.sin(x * k + p1) * Math.sin(y * k * 1.3 + p2) * .6 + Math.sin((x + y) * k * .55 + p3) * .4);
+      const edge = 14 * d;                                                     // the band under the roofline that catches the sky's light
+      for (let i = 0; i < n; i++){
+        const x = r() * w, y = r() * h, ground = belowRoof(V.x + x / scale, V.y + y / scale);
+        if (r() > (ground ? Gl.flecks : Gl.sky) / most) continue;
+        const pa = patch(x, y);
+        if (ground && r() > pa) continue;
+        const rim = ground && !belowRoof(V.x + x / scale, V.y + (y - edge) / scale);
+        const ink = ground ? (rim && r() < .5 ? '#FFF3E0' : FLECK_INKS[Math.floor(r() * FLECK_INKS.length)]) : (r() < .7 ? '#FFFFFF' : '#E6F0FF');
+        // all the glitter is strongest at the top of the postcard and softens towards the bottom (Fiona: less sandy)
+        const t = y / h, fade = 1 - (Gl.fade ?? .8) * t * t * (3 - 2 * t);
+        const a = (ground ? Math.min(.85, (.26 + r() * .4) * (.75 + .5 * pa) * (rim ? 1.5 : 1)) : .1 + r() * .22) * fade,
+              sz = (ground ? .8 + r() * 1.1 : .6 + r() * .8) * d;
+        fc.globalAlpha = a; fc.fillStyle = ink; fc.beginPath(); fc.arc(x, y, sz / 2, 0, 6.2832); fc.fill();
+        flecks.push([x, y, ground, rim, fade]);
+      }
+      fc.globalAlpha = 1;
+    }
+    function drawTwinkles(now){
+      const Gl = SKY.sparkle.glitter, dt = Math.min(.1, (now - (twLast || now)) / 1000); twLast = now;
+      twCtx.setTransform(1, 0, 0, 1, 0, 0); twCtx.clearRect(0, 0, twCv.width, twCv.height);
+      if (!Gl.on || reduce || !flecks.length){ twinkles = []; return; }
+      // about 30 a second at twinkle 1 on a laptop-sized postcard; each a slow soft glint (0.5–1.2 s)
+      const area = twCv.width * twCv.height / (dpr * dpr) / 614400;
+      let n = 30 * Gl.twinkle * Math.max(.4, area) * dt + twCarry; twCarry = n % 1; n = Math.floor(n);
+      while (n-- > 0 && twinkles.length < 150){
+        let f = flecks[Math.floor(Math.random() * flecks.length)];
+        if (!f[2] && Math.random() < .5) f = flecks[Math.floor(Math.random() * flecks.length)];   // lean towards the hills and roofs
+        twinkles.push({ x: f[0], y: f[1], k: .3 + .7 * f[4], t0: now, life: 500 + Math.random() * 700, r: (2 + Math.random() * 2.6) * Gl.size * dpr * (f[3] ? 1.3 : f[2] ? 1 : .8),
+                        img: glintSprites[f[2] ? 1 + Math.floor(Math.random() * 4) : Math.random() < .6 ? 0 : 2] });
+      }
+      twinkles = twinkles.filter(t => {
+        const u = (now - t.t0) / t.life; if (u >= 1) return false;
+        const e = Math.sin(Math.PI * u), r = t.r * (.7 + .3 * e);
+        twCtx.globalAlpha = e * .85 * t.k; twCtx.drawImage(t.img, t.x - r, t.y - r, 2 * r, 2 * r);
+        return true;
+      });
+      twCtx.globalAlpha = 1;
+    }
+    function emitDust(x, y, now){
+      const S = SKY.sparkle.dust;
+      if (!S.on || reduce) return;
+      const dt = Math.min(.05, (now - (emitDust.last || now)) / 1000); emitDust.last = now;
+      let n = S.rate * dt + (emitDust.carry || 0); emitDust.carry = n % 1; n = Math.floor(n);
+      while (n-- > 0 && dust.length < 220)
+        dust.push({ x: x + (Math.random() - .5) * 5, y: y + (Math.random() - .5) * 5, vx: (Math.random() - .5) * 7, vy: 3 + Math.random() * S.fall,
+                    t0: now, life: S.life * 1000 * (.55 + Math.random() * .7), r: S.size * (.35 + Math.random() * .75), tw: Math.random() * 6.28, big: Math.random() < .3, tint: Math.floor(Math.random() * 5) });
+    }
+    function drawDust(now){
+      if (!dust.length) return;
+      ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = '#fff';
+      dust = dust.filter(p => {
+        const u = (now - p.t0) / p.life; if (u >= 1) return false;
+        const t = (now - p.t0) / 1000, x = p.x + p.vx * t, y = p.y + p.vy * t + 4 * t * t;
+        const a = Math.pow(1 - u, 1.3) * (.55 + .45 * Math.sin(p.tw + t * 14));
+        if (p.big){ const r = 3.2 * p.r; ctx.globalAlpha = Math.max(0, a * .9); ctx.drawImage(glintSprites[p.tint], x - r, y - r, 2 * r, 2 * r); ctx.globalAlpha = 1; }
+        else { ctx.globalAlpha = Math.max(0, a); ctx.beginPath(); ctx.arc(x, y, p.r, 0, 6.2832); ctx.fill(); ctx.globalAlpha = 1; }
+        return true;
+      });
     }
     let loop = 0, last = 0, visible = true;
     function tick(now){
       loop = requestAnimationFrame(tick);
       if (now - last < 1000 / SKY.twinkle.fps - 2) return;
-      last = now; drawStars(now);
+      last = now; drawStars(now); drawTwinkles(now);
     }
     function startLoop(){ if (!loop && visible && !reduce) loop = requestAnimationFrame(tick); }
     function stopLoop(){ cancelAnimationFrame(loop); loop = 0; }
@@ -743,7 +867,7 @@
           A.push(at(ta, rp(ta) + w)); B.push(at(ta, rp(ta) - w));
         }
         const [ex, ey] = at(Math.max(o.from, a - len));
-        o.onAngle(a);
+        o.onAngle(a); emitDust(hx, hy, now);
         if (x >= 1){ this.over = true; o.done && o.done(); return null; }
         return { hx, hy, ex, ey, outline: A.concat(B.reverse()), halo: 17, core: 9, head: 5, alpha: 1,
                  group: Math.min(1, x / .05) * (o.fadeEnd && x > .8 ? 1 - (x - .8) / .2 : 1) };
@@ -761,7 +885,7 @@
     const trailFor = end => end + D(SKY.write.trail);
     function clearAll(){
       timers.forEach(clearTimeout); timers = []; clearFlyers(); writer = null;
-      words.textContent = ''; front.textContent = ''; clearTimeout(randTimer);
+      words.textContent = ''; front.textContent = ''; clearTimeout(randTimer); dust = []; emitDust.last = 0;
     }
     const reveal = p => {
       p.el.animate(p.dot
@@ -992,8 +1116,8 @@
       for (let i = 0; i <= 12; i++){ const u = i / 12, e = u * u * (3 - 2 * u); fg.addColorStop(u, `rgba(0,0,0,${(1 - e).toFixed(3)})`); }
       s.fillStyle = fg; s.fillRect(0, 0, W2, H2);
       c.globalCompositeOperation = 'multiply'; c.drawImage(sd, 0, 0); c.globalCompositeOperation = 'source-over';
+      c.drawImage(fleckCv, 0, 0); c.drawImage(twCv, 0, 0);          // the glitter
       c.drawImage(fly, 0, 0);
-      if (CREDIT.inVideo && CREDIT.text) drawCredit(c, W2 / root.clientWidth);
       if (SKY.grain.on){
         if (!grainTile) grainTile = c.createPattern(grainCanvas, 'repeat');
         grainTile.setTransform(new DOMMatrix().scale(SKY.grain.size));
@@ -1002,19 +1126,27 @@
       c.restore();
     }
 
-    // the credit, drawn as on screen (same size, spacing and place), so the video carries it too
-    function drawCredit(c, k){
+    // the credit, small in the video's bottom-right corner, in the same lettering as on screen
+    function drawCredit(c, k, W, H){
       const el = root.querySelector('.pc-credit'), cs = getComputedStyle(el);
-      const fs = parseFloat(cs.fontSize) || 10, sp = parseFloat(cs.letterSpacing) || 0;
-      const right = parseFloat(cs.right) || 12, bottom = parseFloat(cs.bottom) || 10;
-      const text = CREDIT.text.toUpperCase();
-      c.save(); c.globalCompositeOperation = 'source-over'; c.globalAlpha = CREDIT.opacity; c.fillStyle = '#fff';
+      const fs = Math.max(10, parseFloat(cs.fontSize) || 10), sp = fs * .12, text = CREDIT.text.toUpperCase();
+      c.save(); c.setTransform(1, 0, 0, 1, 0, 0); c.globalCompositeOperation = 'source-over'; c.globalAlpha = CREDIT.opacity; c.fillStyle = '#fff';
       c.font = `500 ${fs * k}px Jost, "Avenir Next", sans-serif`; c.textBaseline = 'alphabetic';
       const widths = [...text].map(ch => c.measureText(ch).width + sp * k), total = widths.reduce((a, b) => a + b, 0) - sp * k;
-      let x = root.clientWidth * k - right * k - total;
-      const y = root.clientHeight * k - bottom * k - fs * k * .28;
+      let x = W - 16 * k - total;
+      const y = H - 14 * k;
       [...text].forEach((ch, i) => { c.fillText(ch, x, y); x += widths[i]; });
       c.restore();
+    }
+
+    // The video is always one of two shapes, whatever the sender's window: 16:9 from a laptop, 9:16 from a phone.
+    // It takes the middle of the postcard, keeps the top of the sky, and shows some of the dark ground under the skyline.
+    function videoCrop(){
+      const W = root.clientWidth, H = root.clientHeight, sky = H - stripPx(), wide = W > H, R = wide ? 16 / 9 : 9 / 16;
+      let cw = W, ch = W / R;
+      if (ch > H){ ch = H; cw = H * R; }
+      const y1 = Math.min(H, Math.max(ch, sky + ch * .08));         // a little ground below the skyline
+      return { x: (W - cw) / 2, y: y1 - ch, w: cw, h: ch, wide };
     }
 
     /* ---------- record the star writing the message: ~8 s, MP4 where the browser can, else WebM ---------- */
@@ -1025,15 +1157,23 @@
         const types = ['video/mp4;codecs=avc1.42E01E', 'video/mp4', 'video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm'];
         const type = window.MediaRecorder && types.find(t => MediaRecorder.isTypeSupported(t));
         if (!type || !HTMLCanvasElement.prototype.captureStream) return reject(new Error('This browser can’t make videos; the link still works.'));
-        const out = Math.min(1, 1600 / cv.width), rc = document.createElement('canvas');
-        rc.width = Math.round(cv.width * out / 2) * 2; rc.height = Math.round(cv.height * out / 2) * 2;
-        const c = rc.getContext('2d'), stream = rc.captureStream(30);
+        const crop = videoCrop(), rc = document.createElement('canvas'), full = document.createElement('canvas');
+        const RW = Math.round(Math.min(crop.wide ? 1600 : 720, crop.w * dpr) / 2) * 2, RH = Math.round(RW * crop.h / crop.w / 2) * 2;
+        rc.width = RW; rc.height = RH; full.width = cv.width; full.height = cv.height;
+        const fc = full.getContext('2d'), rcx = rc.getContext('2d'), stream = rc.captureStream(30);
+        const k = RW / crop.w;
+        const shot = () => {                                         // the whole postcard, then the crop, then the credit
+          compose(fc, 1);
+          rcx.imageSmoothingQuality = 'high';
+          rcx.drawImage(full, crop.x * dpr, crop.y * dpr, crop.w * dpr, crop.h * dpr, 0, 0, RW, RH);
+          if (CREDIT.inVideo && CREDIT.text) drawCredit(rcx, k, RW, RH);
+        };
         const rec = new MediaRecorder(stream, { mimeType: type, videoBitsPerSecond: 8e6 }), chunks = [];
         rec.ondataavailable = e => e.data.size && chunks.push(e.data);
         recording = true; pending = null;
         let raf = 0, t0 = 0, total = 0, stopAt = 0;
         const frame = now => {
-          compose(c, out);
+          shot();
           if (total) onProgress && onProgress(Math.min(1, (now - t0) / total));
           if (stopAt && now >= stopAt){ rec.stop(); return; }
           raf = requestAnimationFrame(frame);
@@ -1041,9 +1181,9 @@
         rec.onstop = () => { cancelAnimationFrame(raf); recording = false; stream.getTracks().forEach(t => t.stop());
           resolve({ blob: new Blob(chunks, { type: type.split(';')[0] }), ext: type.includes('mp4') ? 'mp4' : 'webm', w: rc.width, h: rc.height }); };
         rec.onerror = e => { recording = false; reject(e.error || e); };
-        compose(c, out); onCanvas && onCanvas(rc); rec.start(250); t0 = performance.now();
+        shot(); onCanvas && onCanvas(rc); rec.start(250); t0 = performance.now();
         const hold = 2.2, text = currentText;
-        clearAll(); compose(c, out);
+        clearAll(); shot();
         const from = A(-166), to0 = layout(text, document.createElementNS(NS, 'g'), trailFor).end + D(SKY.write.after);
         total = (reduce ? 3 : durFor(from, to0) + .6 + hold) * 1000;
         setTimeout(() => play(text, () => { if (!reduce) stopAt = performance.now() + hold * 1000; }), reduce ? 0 : 600);
@@ -1060,6 +1200,7 @@
       set onWritten(fn){ onWritten = fn; },
       set canReplay(fn){ canReplay = fn; },
       // change the lettering size ([landscape, portrait] px) and let the star write it again
+      glitter(){ makeFlecks(); },
       letters(px){ SKY.view.letterPx = px; fitIn = ''; size(); if (!recording) play(currentText); }
     };
   }
@@ -1131,7 +1272,8 @@
     el.share.addEventListener('click', async () => {
       el.link.value = shareLink(); el.copy.textContent = 'Copy link';
       el.linkNote.textContent = '';
-      el.media.style.setProperty('--pc-ar', `${el.postcard.clientWidth} / ${el.postcard.clientHeight}`);
+      const wideVideo = el.postcard.clientWidth > el.postcard.clientHeight;   // the video's fixed shape
+      el.media.style.setProperty('--pc-ar', wideVideo ? '16 / 9' : '9 / 16'); el.media.style.setProperty('--pc-arn', wideVideo ? 16 / 9 : 9 / 16);
       sheet.hidden = false; el.copy.focus();
       const key = P.text + '|' + P.palette() + '|' + el.media.style.getPropertyValue('--pc-ar');
       if (video && key === videoKey){ showVideo(); return; }
