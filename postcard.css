@@ -419,7 +419,7 @@
 /* The received postcard has a fixed shape whatever the window, with a band of dark ground under the skyline
    (no controls on it). Phones: the 3:4 sky + ground, about 3:5. Laptops: 16:10, a 16:9 sky + ground. */
 .pc-card.pc-viewer { --pc-strip: calc(var(--pc-w) * 0.3); }
-.pc-card.pc-viewer .pc-postcard > .pc-credit { right: 16px; bottom: max(10px, calc(var(--pc-strip) / 2 - 0.5em)); }
+.pc-card.pc-viewer .pc-postcard > .pc-credit { right: 16px; bottom: 14px; }   /* tucked in the corner */
 @media (min-width: 601px) {
     .pc-card.pc-viewer {
         --pc-w: max(min(calc(100vw - 2 * var(--pc-side)), 1200px, calc((100svh - var(--pc-room)) * 1.6)),
@@ -427,7 +427,7 @@
         --pc-strip: calc(var(--pc-w) * 0.0625);
     }
     .pc-card.pc-viewer .pc-postcard { height: calc(var(--pc-w) / 1.6); }
-    .pc-card.pc-viewer .pc-postcard > .pc-credit { right: 20px; }
+    .pc-card.pc-viewer .pc-postcard > .pc-credit { right: 20px; bottom: 16px; }
 }
 .pc-card.pc-viewer .pc-viewer-bar { display: grid; gap: 14px; justify-items: center; text-align: center; }
 .pc-viewer-bar p { font-size: clamp(18px, 1.6vw, 22px); }

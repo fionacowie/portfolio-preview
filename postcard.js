@@ -45,6 +45,7 @@
     // bottom of the drawing around focusX, so the buildings read larger while the sky keeps its framing.
     view: { crop: 'city', skyTop: -26, maxHeight: 1152, belowDetail: 18, narrowGround: 1, letterPx: [20, 16], spiral: true,
             focusX: 827, skylineScale: 1.6 },   // chosen 9 Nov: crop C (3:4), skyline 1.6×, the Old Town group centred under the lettering
+    phone: { drop: .045, letterY: .4 },   // portrait: skyline lowered by this share of the postcard's height; the arc's height in the sky (0 top … 1 bottom)
     // pale light low behind the buildings: a wide soft ellipse centred on the city, just above the roofs (artboard units)
     paleGlow: { on: true, amount: .45, size: 210, whiten: .15, x: 800, y: 900, rx: 980 },
     // the three round buttons (chosen 6 Nov). Shared links carry only the button number, so change colours here.
@@ -533,14 +534,17 @@
       if (!free([mx, my])){
         const mg = Math.max(60, .1 * V.w), near = stars.filter(s => s.low === undefined && s.x > V.x - 60 && s.x < V.x + V.w + 60 && s.y > V.y - 60 && s.y < V.y + V.h * .6);
         let best = null;
+        // the left third of the sky first (where Fiona drew it); anywhere only if the left has no room
+        for (const xMax of [V.x + V.w * .34, V.x + V.w - mg]) { if (best) break;
         for (let cy = V.y + V.h * .14; cy <= V.y + V.h * .45; cy += 20)
-          for (let cx = V.x + mg; cx <= V.x + V.w - mg; cx += 20){
-            if (!free([cx, cy])) continue;
+          for (let cx = V.x + mg; cx <= xMax; cx += 20){
+            if (!free([cx, cy]) || Math.hypot(cx - CX, cy - CY) < R_BASE + CAP + 40) continue;   // outside the arc, never tucked under the words
             let n = 0;
             for (const st of near){ const dx = st.x - cx, dy = st.y - cy; if (dx * dx + dy * dy < 3600) n += st.faint ? .3 : 1 + st.r * .3; }
-            const score = n + (cy - V.y) / V.h * 3 + (cx - V.x) / V.w * 2;
+            const score = n + (cy - V.y) / V.h * 3 + (cx - V.x) / V.w * 7;   // the left side of the sky, as in Fiona's drawing
             if (!best || score < best.s) best = { s: score, x: cx, y: cy };
           }
+        }
         if (best){ x = best.x; y = best.y; }
       }
       moonAt = [x, y];
@@ -550,15 +554,17 @@
       const dr = Math.hypot(x - CX, y - CY) - (R_BASE + CAP / 2), a = Math.atan2(y - CY, x - CX) * 180 / Math.PI;
       return Math.abs(dr) < CAP * .9 + 6 && a > TEXT_START - D(3) && a < WEND + D(2);
     }
-    let bgTimer = 0, bgDone = false;
+    let bgTimer = 0, bgDone = false, groundU = 0;
     function size(){
       const b = root.getBoundingClientRect(); if (!b.width || !b.height) return;
       dpr = Math.min(b.width > 1100 ? 1.5 : DPR_CAP, window.devicePixelRatio || 1);   // big postcards: a little lighter
       const S = SKY.view, wantS = b.width < b.height ? (S.skylineScale || 1) : 1, wantCx = S.focusX ?? FOCUS[S.crop] ?? 810;
       if (wantS !== skyS || (wantS !== 1 && wantCx !== skyCx)){ scaleSkyline(wantS, wantCx); bgDone = false; fitIn = ''; }
-      const strip = stripPx();
-      V = view(b.width, b.height - strip);
-      if (strip) V = { ...V, h: V.h + strip / V.k };                 // extra ground below for the controls
+      const strip = stripPx(), tall = b.width < b.height;
+      const drop = tall ? Math.min(strip, SKY.phone.drop * b.height) : 0;   // phones: the skyline sits a little lower, over the ground strip
+      V = view(b.width, b.height - strip + drop);
+      groundU = (strip - drop) / V.k;
+      if (groundU > 0) V = { ...V, h: V.h + groundU };               // extra ground below for the controls
       if (!sidesMade && (V.x < -2 || V.x + V.w > W + 2)) makeSides();
       cv.width = fly.width = flyOff.width = twCv.width = Math.round(b.width * dpr); cv.height = fly.height = flyOff.height = twCv.height = Math.round(b.height * dpr); flyBoxes = [];
       scale = cv.width / V.w;
@@ -711,6 +717,7 @@
       if (inKey === fitIn) return false;
       fitIn = inKey;
       const mid = TEXT0 + wG / (R0 - GAP0) * 90 / Math.PI;
+      const skyH = V.h - groundU, fyWant = V.w < V.h ? SKY.phone.letterY : .45;
       const test = (cx, cy, r, start, loose, grow = 0) => {
         const rb = r - gap, mg = Math.max(10, .045 * V.w), P = (a, rr) => [cx + rr * Math.cos(rad(a)), cy + rr * Math.sin(rad(a))];
         const spa = start + (-90 - TEXT0) * R0 / r, rr0 = a => r + (a > spa ? grow * (a - spa) * (a - spa) : 0);
@@ -720,7 +727,7 @@
             const [x, y] = P(a, rr);
             if (x < V.x + mg || x > V.x + V.w - mg || y < V.y + mg || belowRoof(x, y + 14)) return false;
           }
-        const VB = V.y + V.h;
+        const VB = V.y + skyH;                                       // the trail has to reach the bottom of the sky (not the controls' ground)
         let exit = null;
         for (let a = end; a <= 125; a += 1){
           const [x, y] = P(a, rr0(a));
@@ -731,7 +738,7 @@
         return exit;
       };
       let g = null;
-      const ex0 = test(CX0, CY0, R0, TEXT0);
+      const ex0 = V.w < V.h ? false : test(CX0, CY0, R0, TEXT0);   // phones always fit their own circle, at SKY.phone.letterY
       if (ex0 !== false) g = { cx: CX0, cy: CY0, r: R0, start: TEXT0, exit: ex0, own: true };
       else for (const [loose, grows] of [[false, [0]], [false, S.spiral ? [.0015, .003, .005, .008] : []], [true, [0]]]){
         if (g) break;
@@ -740,9 +747,9 @@
           for (const fx of [.5, .45, .55, .4, .6, .35, .65]){
             const cx = V.x + fx * V.w;
             for (let fy = .2; fy <= .7; fy += .03) for (const gw of grows){
-              const cy = V.y + fy * V.h + .857 * r;
+              const cy = V.y + fy * skyH + .857 * r;                 // measured in the sky, not the ground strip
               const ex = test(cx, cy, r, start, loose, gw); if (ex === false) continue;
-              const score = -Math.abs(r / V.w - .45) * 2 - Math.abs(fy - .45) * 1.2 - Math.abs(fx - .5) * .6 - gw * 25;
+              const score = -Math.abs(r / V.w - .45) * 2 - Math.abs(fy - fyWant) * 1.2 - Math.abs(fx - .5) * .6 - gw * 25;
               if (!g || score > g.score) g = { score, cx, cy, r, start, exit: ex, loose, grow: gw };
             }
           }
