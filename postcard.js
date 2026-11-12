@@ -45,7 +45,7 @@
     // bottom of the drawing around focusX, so the buildings read larger while the sky keeps its framing.
     view: { crop: 'city', skyTop: -26, maxHeight: 1152, belowDetail: 18, narrowGround: 1, letterPx: [20, 16], spiral: true,
             focusX: 827, skylineScale: 1.6 },   // chosen 9 Nov: crop C (3:4), skyline 1.6×, the Old Town group centred under the lettering
-    phone: { drop: .045, letterY: .4 },   // portrait: skyline lowered by this share of the postcard's height; the arc's height in the sky (0 top … 1 bottom)
+    phone: { drop: .045, letterY: .56 },   // portrait: skyline lowered by this share of the postcard's height; the arc's height in the sky (0 top … 1 bottom)
     // pale light low behind the buildings: a wide soft ellipse centred on the city, just above the roofs (artboard units)
     paleGlow: { on: true, amount: .45, size: 210, whiten: .15, x: 800, y: 900, rx: 980 },
     // the three round buttons (chosen 6 Nov). Shared links carry only the button number, so change colours here.
@@ -60,6 +60,7 @@
   // Each style has a base pair and one pair per sky; `follow` (0–1) is how far the card moves from base towards the sky's pair.
   const CARD = {
     style: 'sky', follow: 1, grain: .3, grainSize: 160, frame: true,
+    glassGrain: .35,   // Fiona, 12 Nov; grain showing through the glass field and SHARE (0 = smooth glass, 1 = about the postcard's own)
     styles: {
       // Fiona's choice (6 Nov): pale, sky-tinted top-left into a bright blue, following the postcard's colours
       sky:      { name: 'Sky',       base: ['#F5FDFF', '#4D82FF'], skies: [['#CFEDEB', '#6AA8F7'], ['#F0DBFC', '#809BFF'], ['#F0D6DD', '#8298F0']] },
@@ -227,11 +228,13 @@
     [0, 1].forEach(n => card.style.setProperty(`--pc-bg${n + 1}`, rgb(mix(hex(st.base[n]), hex(sky[n]), CARD.follow))));
     card.style.setProperty('--pc-grain', CARD.grain);
     card.style.setProperty('--pc-grain-size', CARD.grainSize + 'px');
+    card.style.setProperty('--pc-glass-grain', CARD.glassGrain);
     card.classList.toggle('pc-framed', CARD.frame);
     // the sky's own pastel (its glow into its horizon), for the SHARE button's highlight
     const p = SKY.palettes[i] || SKY.palettes[0];
     card.style.setProperty('--pc-sky-hi', `linear-gradient(135deg, ${p.glow}, ${p.bottom})`);
     sheet.style.setProperty('--pc-sky-hi', `linear-gradient(135deg, ${p.glow}, ${p.bottom})`);   // the share window's buttons too
+    card.style.setProperty('--pc-sky-a', p.glow); card.style.setProperty('--pc-sky-b', p.bottom);   // tints the glass controls
   }
   (() => {
     const T = 256, c = document.createElement('canvas'); c.width = c.height = T;

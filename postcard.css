@@ -20,6 +20,9 @@
 @property --pc-bg1 { syntax: '<color>'; inherits: false; initial-value: #CFEDEB; }
 @property --pc-bg2 { syntax: '<color>'; inherits: false; initial-value: #6AA8F7; }
 /* a registered length, so a calc() strip (the received view's) reaches postcard.js as plain pixels */
+/* the sky's glow and horizon colours, for the glass controls; registered so they fade with the sky */
+@property --pc-sky-a { syntax: '<color>'; inherits: true; initial-value: #ADFFE5; }
+@property --pc-sky-b { syntax: '<color>'; inherits: true; initial-value: #88CEC6; }
 @property --pc-strip { syntax: '<length>'; inherits: true; initial-value: 0px; }
 
 /* A full-width band: it runs edge to edge of the window, whatever container it sits in */
@@ -34,7 +37,7 @@
     margin-left: calc(50% - 50vw);
     padding: clamp(24px, 3.5vw, 40px) var(--pc-side) clamp(28px, 3.5vw, 40px);
     background: linear-gradient(135deg, var(--pc-bg1), var(--pc-bg2));
-    transition: --pc-bg1 1.2s ease, --pc-bg2 1.2s ease;
+    transition: --pc-bg1 1.2s ease, --pc-bg2 1.2s ease, --pc-sky-a 1.2s ease, --pc-sky-b 1.2s ease;
 }
 
 /* grain over the card's colour (a still tile made once by postcard.js) */
@@ -266,10 +269,10 @@
     border: var(--pc-edge) solid var(--pc-ink);
     color: var(--pc-ink);
     font-family: inherit;
-    font-weight: 700;
+    font-weight: 400;
     font-size: 14px;
     text-transform: uppercase;
-    letter-spacing: 0.05em;
+    letter-spacing: 0.08em;
     transition: all 0.3s ease;
 }
 
@@ -361,6 +364,86 @@
 /* SHARE lights up in the chosen sky's own pastel (set by postcard.js), and fills with it while the video is made */
 .pc-body > .pc-controls .pc-share::before { background: var(--pc-sky-hi, var(--pc-hover)); }
 
+/* ---------- liquid glass (12 Nov, v28: crisper and more delicate) ----------
+   Inspired by iOS's glass buttons: clear glass with a faint wash of the chosen sky, the stars softly blurred behind,
+   and a fine, crisp rim that catches the light at the top-left and bottom-right. No soft shadows (they blur the edge).
+   Add .pc-flat to the card for the earlier "night glass" look. */
+.pc-card:not(.pc-flat) .pc-body > .pc-controls { --g-a: var(--pc-sky-a); --g-b: var(--pc-sky-b); }
+.pc-card:not(.pc-flat) .pc-body > .pc-controls :is(.pc-field-row, .pc-share) {
+    position: relative;
+    border-color: transparent;
+    /* an even, slightly brighter glass with a wash of the sky */
+    background: linear-gradient(color-mix(in srgb, var(--g-a) 14%, rgba(255, 255, 255, 0.08)), color-mix(in srgb, var(--g-a) 10%, rgba(255, 255, 255, 0.06)));
+    -webkit-backdrop-filter: blur(12px) saturate(150%) brightness(1.12);
+            backdrop-filter: blur(12px) saturate(150%) brightness(1.12);
+    /* the light on the edge, as on iOS: a bright hairline along the top and the bottom, the ends barely lit,
+       a faint sheen just inside the top, and a very faint dark line just outside */
+    --g-edge:
+        inset 0 1px 0 rgba(255, 255, 255, 0.62),
+        inset 0 -1px 0 color-mix(in srgb, var(--g-a) 45%, rgba(255, 255, 255, 0.3)),
+        inset 1px 0 0 rgba(255, 255, 255, 0.1),
+        inset -1px 0 0 rgba(255, 255, 255, 0.1),
+        inset 0 8px 8px -8px rgba(255, 255, 255, 0.12),
+        0 0 0 0.5px rgba(0, 6, 20, 0.45);
+    box-shadow: var(--g-edge);
+    transition: background 0.3s ease, color 0.3s ease, transform 0.3s ease, box-shadow 0.3s ease;
+}
+.pc-card:not(.pc-flat) .pc-body > .pc-controls :is(.pc-field-row, .pc-share) { isolation: isolate; }
+/* a little of the postcard's grain in the glass, behind the words (CARD.glassGrain) */
+.pc-card:not(.pc-flat) .pc-body > .pc-controls :is(.pc-field-row, .pc-share)::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    border-radius: inherit;
+    background-image: var(--pc-card-grain, none);
+    background-size: var(--pc-grain-size, 160px);
+    opacity: calc(var(--pc-glass-grain, 0.35) * 0.16);   /* 1 ≈ the grain the card shows */
+    pointer-events: none;
+}
+.pc-card:not(.pc-flat) .pc-body > .pc-controls .pc-field-row input::placeholder { color: rgba(255, 255, 255, 0.68); }
+/* the field on hover: a little more sky in the glass */
+.pc-card:not(.pc-flat) .pc-body > .pc-controls .pc-field-row:hover {
+    background: linear-gradient(170deg, color-mix(in srgb, var(--g-a) 22%, transparent), color-mix(in srgb, var(--g-b) 10%, transparent));
+}
+/* SHARE on hover: filled with the sky's own pastel, navy words (as before) */
+.pc-card:not(.pc-flat) .pc-body > .pc-controls .pc-share:hover { background: var(--pc-sky-hi, var(--pc-hover)); color: #0A1F3A; transform: scale(1.02); }
+/* focus: the rim becomes an even, softer white line (60%), 1.5px */
+.pc-card:not(.pc-flat) .pc-body > .pc-controls :is(.pc-field-row:focus-within, .pc-share:focus-visible) {
+    outline: none;
+    /* one even line: the glass's own edge lit all the way round (no second ring outside it) */
+    box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, 0.62), inset 0 8px 8px -8px rgba(255, 255, 255, 0.12);
+}
+/* while the video is made: the glass fills with the sky from the left, words in navy */
+.pc-card:not(.pc-flat) .pc-body > .pc-controls .pc-share[aria-busy="true"] { background: rgba(255, 255, 255, 0.78); color: #0A1F3A; }
+
+/* the send button: a small bead of the sky's glow, navy arrow; faint glass until there's something to send */
+.pc-card:not(.pc-flat) .pc-body > .pc-controls .pc-send {
+    background: linear-gradient(160deg, color-mix(in srgb, var(--g-a) 55%, #fff), var(--g-a));
+    color: #0A1F3A;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.5);
+}
+.pc-card:not(.pc-flat) .pc-body > .pc-controls .pc-send:not(:disabled):hover { background: var(--pc-sky-hi, var(--pc-hover)); transform: scale(1.04); }
+.pc-card:not(.pc-flat) .pc-body > .pc-controls .pc-send:disabled {
+    background: color-mix(in srgb, var(--g-a) 10%, rgba(255, 255, 255, 0.06));
+    color: rgba(255, 255, 255, 0.55);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.2);
+}
+.pc-card:not(.pc-flat) .pc-body > .pc-controls .pc-send:focus-visible { outline: 1.5px solid rgba(255, 255, 255, 0.6); outline-offset: 2px; }
+
+/* the sky buttons: plain skies with a fine rim; the chosen one a soft, thin ring with a navy gap */
+.pc-card:not(.pc-flat) .pc-body > .pc-controls .pc-swatch { box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.3); }
+.pc-card:not(.pc-flat) .pc-body > .pc-controls .pc-swatch:hover { box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.6); }
+.pc-card:not(.pc-flat) .pc-body > .pc-controls .pc-swatch[aria-pressed="true"] {
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.3), 0 0 0 3px #0A1F3A, 0 0 0 4.5px rgba(255, 255, 255, 0.65);
+}
+.pc-card:not(.pc-flat) .pc-body > .pc-controls .pc-swatch:focus-visible { outline: 1.5px solid rgba(255, 255, 255, 0.6); outline-offset: 6px; }
+
+/* light text on dark: Macs draw it bolder than dark-on-light, so use the thinner smoothing there,
+   which keeps every label the same regular weight to the eye */
+.pc-body > .pc-controls,
+.pc-btn.pc-save, .pc-btn.pc-share-video, a.pc-btn.pc-own { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+
 /* phones: sky buttons and SHARE on the first row, the field across the second; the hint is for screen readers only */
 @media (max-width: 600px) {
     .pc-field { flex: 1 1 100%; order: 3; width: 100%; }
@@ -395,10 +478,10 @@
     border: 1px solid #0A1F3A;
     color: #0A1F3A;
     font-family: inherit;
-    font-weight: 700;
+    font-weight: 400;
     font-size: 15px;
     text-transform: uppercase;
-    letter-spacing: 0.05em;
+    letter-spacing: 0.08em;
     white-space: nowrap;
     cursor: pointer;
     transition: background 0.3s ease, border-color 0.3s ease, color 0.3s ease, transform 0.3s ease;
