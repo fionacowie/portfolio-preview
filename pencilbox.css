@@ -1,0 +1,282 @@
+/* ==========================================================================================
+   Pencil Box · Play section card (built by pencilbox.js)
+   Every rule is scoped to .pb / .pb-card (all classes start with "pb-"; the drawing engine's own pieces sit
+   inside .pb), so nothing here can change the rest of the site. Colours, focus ring and hover follow styles.css.
+   ========================================================================================== */
+/* grain tiles, made once by the script (on <html>, so the full-screen view outside the card has them too) */
+:root { --pb-grain: none; --pb-grain-soft: none; --pb-grain-size: 160px; }
+/* the lid's grain on the tin's other surfaces: a softer tile blended into the surface colour */
+.pb { --pb-tex: var(--pb-grain-soft) 0 0 / var(--pb-grain-size) repeat; }
+/* shared by the card and the phone's full-screen view (.pb on both) */
+.pb {
+  --pb-blue: #5B8BEF; --pb-navy: #0F2D47; --pb-paper: #FAF8F4;
+  --pb-hi: linear-gradient(135deg, #CCDCFB 0%, #FFD1F6 60%, #FFEAA6 100%);   /* hover: always the Flowers pencil's pastel (blue → pink → gold) */
+  --pb-focus: #FF5D3C;
+}
+/* =====================================================================================================
+   PENCIL BOX CARD: everything below is scoped to .pb-card (classes start pb-), like the postcard (pc-)
+   ===================================================================================================== */
+.pb-card {
+  --pb-side: clamp(16px, 4vw, 64px);
+  --pb-room: 200px;                                   /* heading + padding: heading and closed tin fit one screen */
+  --pb-w: max(min(calc(100vw - 2 * var(--pb-side)), 1200px, calc((100svh - var(--pb-room)) * 2.2963)),
+              min(calc(100vw - 2 * var(--pb-side)), 560px));
+  position: relative; isolation: isolate;
+  display: grid; justify-items: center; gap: clamp(20px, 3vw, 32px);
+  width: 100vw; margin-left: calc(50% - 50vw);
+  padding: clamp(24px, 3.5vw, 40px) var(--pb-side) clamp(28px, 3.5vw, 44px);
+  background: linear-gradient(240deg, #FFCB45 0%, #FBA9A6 48%, #F98AF2 100%);
+  font-family: "Jost", system-ui, sans-serif;
+  overflow: clip;
+}
+/* faint pencils scattered across the band, then the postcard's still grain over the colour */
+.pb-card::before, .pb-card::after { content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none; }
+.pb-card::before { background-image: var(--pb-pattern, none); background-size: 460px; opacity: .55; }
+.pb-card::after { background-image: var(--pb-grain, none); background-size: var(--pb-grain-size, 160px); mix-blend-mode: soft-light; opacity: .32; }
+
+.pb-head { text-align: center; }
+.pb-label { margin: 0; font-size: clamp(16px, 1.39vw, 20px); line-height: 1.4; }
+.pb-title { margin: 4px 0 0; font-size: clamp(26px, 2.1vw, 32px); font-weight: 700; line-height: 1.3; text-wrap: balance; }
+
+/* ---------- the tin ---------- */
+.pb-tin {
+  --gap: max(8px, 1.13cqw);
+  --r: 3.72cqw;                                       /* outer corner: rx 46 of 1240 */
+  position: relative; width: var(--pb-w); height: var(--hl, 400px);
+  container-type: inline-size;
+  perspective: 2600px; perspective-origin: 50% var(--hl, 400px);
+}
+.pb-box {
+  position: relative; z-index: 1;                    /* everything inside (buttons, labels, pencil) stays under the lid */
+  height: var(--hl, 400px); overflow: hidden;
+  border-radius: var(--r); background: var(--pb-tex), var(--pb-blue); background-blend-mode: soft-light, normal; padding: max(5px, .65cqw);
+}
+.pb-inner {
+  background: var(--pb-tex), var(--pb-navy); background-blend-mode: soft-light, normal; border-radius: max(12px, 3.2cqw);
+  padding: max(10px, 1.3cqw) max(10px, 1.3cqw) max(10px, 1.3cqw) max(8px, .9cqw);
+}
+.pb-inner[hidden] { display: none; }
+
+/* hinge tabs between the box and the open lid */
+.pb-hinge { position: absolute; z-index: 3; width: 6.55%; height: max(6px, .9cqw); border-radius: 99px; background: var(--pb-tex), var(--pb-blue); background-blend-mode: soft-light, normal;
+  top: calc(var(--hl, 400px) + var(--gap) / 2 - max(3px, .45cqw)); pointer-events: none; }   /* on the lid's pivot, closed or open */
+.pb-hinge.l { left: 26.95%; } .pb-hinge.r { left: 66.55%; }
+.pb-tin[data-state="open"] .pb-hinge { transform: translateY(var(--d, 0px)); }   /* they move down with the lid when the box is taller */
+
+/* ---------- the lid (bottom hinges: it flips down below the box) ---------- */
+.pb-lid {
+  position: absolute; left: 0; top: 0; width: 100%; height: var(--hl, 400px); z-index: 2;
+  transform-style: preserve-3d; transform-origin: 50% calc(100% + var(--gap) / 2);
+  transition: transform .45s cubic-bezier(.3, 1.3, .5, 1);
+}
+.pb-tin[data-state="open"] .pb-lid { transform: translateY(var(--d, 0px)) rotateX(-180deg); }
+@media (hover: hover) { .pb-tin[data-state="closed"] .pb-lid:hover { transform: rotateX(-5deg); } }
+.pb-face { position: absolute; inset: 0; border-radius: var(--r); overflow: hidden; backface-visibility: hidden; -webkit-backface-visibility: hidden; }
+.pb-face.inside { transform: rotateX(180deg); background: var(--pb-blue); }
+.pb-lid-art { position: absolute; inset: 0; width: 100%; height: 100%; display: block; pointer-events: none; }
+.pb-grain { position: absolute; inset: 0; pointer-events: none; background-image: var(--pb-grain, none); background-size: var(--pb-grain-size, 160px); mix-blend-mode: soft-light; opacity: .3; }
+.pb-face.inside .pb-grain { opacity: .18; }
+.pb-shade { position: absolute; inset: 0; background: #0B1B2E; opacity: 0; pointer-events: none; }
+.pb-open { position: absolute; inset: 0; width: 100%; border: 0; padding: 0; margin: 0; background: transparent; cursor: pointer; border-radius: var(--r); }
+.pb-open:focus-visible { outline: 3px solid #fff; outline-offset: -10px; }
+.pb-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* inside of the lid: navy band, blue panel, the swallows and the author's note */
+.pb-face.inside::before { content: ""; position: absolute; inset: max(5px, .65cqw); border-radius: max(12px, 3.2cqw); background: var(--pb-navy); }
+.pb-note {
+  position: absolute; inset: max(10px, 1.85cqw); border-radius: max(10px, 2cqw); background: var(--pb-blue);
+  display: grid; place-content: center; justify-items: center; text-align: center;
+  gap: max(6px, 1.3cqw); padding: 0 6cqw;
+}
+.pb-dots { position: absolute; inset: 0; width: 100%; height: 100%; display: block; pointer-events: none; }
+/* the maker's mark, like the stamp inside a real tin */
+.pb-mark { margin: 0; display: grid; justify-items: center; gap: max(6px, .9cqw); color: #2E5CC2; text-transform: uppercase; text-align: center; }
+.pb-mark-name { font-weight: 700; font-size: max(15px, 2.45cqw); letter-spacing: .3em; margin-right: -.3em; line-height: 1;
+  padding-bottom: max(6px, .9cqw); border-bottom: max(1.5px, .16cqw) solid currentColor; }
+.pb-mark-line { font-weight: 500; font-size: max(9px, 1.4cqw); letter-spacing: .3em; margin-right: -.3em; line-height: 1; }
+/* phones: the lid only swings past on the way to full screen, so its inside is just the swallows */
+.pb-tin[data-mode="full"] .pb-pills { display: none; }
+.pb-pills { display: flex; flex-wrap: wrap; justify-content: center; gap: max(8px, 1.2cqw); margin-top: max(6px, 1.8cqw); }
+.pb-pill {
+  all: unset; box-sizing: border-box; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: .4em;
+  height: max(30px, 2.6cqw); padding: 0 max(14px, 1.5cqw); border-radius: 999px;
+  background: rgba(251, 249, 245, .5); color: #000;
+  font: 500 max(12px, 1.25cqw)/1 "Jost", system-ui, sans-serif; text-transform: uppercase; letter-spacing: .04em; white-space: nowrap;
+  transition: background .3s ease, transform .3s ease;
+}
+.pb-pill:hover { background: var(--pb-hi); transform: scale(1.02); }
+.pb-pill:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+
+/* ---------- inside the box: Final Five's tray and paper (its styles, unchanged apart from the font) ---------- */
+.pb .desk { display: grid; gap: max(8px, 1.3cqw); }
+.pb .box {
+  --ink: #E6EEF6; --muted: #8EA2B8; --focus: #9FD3FF;
+  background: var(--pb-tex), linear-gradient(#172B45, #13243A); background-blend-mode: soft-light, normal; border: 1px solid #223650; border-radius: 12px;
+  padding: 14px 14px 12px; display: grid; gap: 10px; color: var(--ink);
+}
+.pb .box-top { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 4px 16px; }
+.pb .box-note { color: var(--muted); font-size: 14px; }
+.pb .box-title { font: 500 11px/1 "Jost", system-ui, sans-serif; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); transition: opacity .4s ease; }
+.pb .box-title.swap { opacity: 0; }
+.pb .slots { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; background: var(--pb-tex), #0A1829; background-blend-mode: soft-light, normal; border-radius: 8px; padding: 10px 8px 6px; box-shadow: inset 0 6px 14px #0009; }
+.pb .slot { appearance: none; border: 0; background: transparent; color: var(--muted); display: grid; justify-items: center; gap: 4px; padding: 4px 2px 6px; cursor: pointer; border-radius: 8px; font: 500 13px/1.2 "Jost", system-ui, sans-serif; }
+.pb .slot svg { width: 100%; max-width: 44px; height: 118px; overflow: visible; transition: transform .25s cubic-bezier(.3,1.4,.5,1), opacity .25s ease; }
+.pb .slot:hover svg { transform: translateY(-8px); }
+.pb .slot.nudge svg { animation: pbNudge .5s cubic-bezier(.3,1.4,.5,1) var(--d, 0ms); }
+@keyframes pbNudge { 40% { transform: translateY(-10px); } 100% { transform: none; } }
+@keyframes pbNudgeSide { 40% { transform: translateX(8px); } 100% { transform: none; } }
+.pb .slot[aria-pressed="true"] { color: var(--ink); background: #ffffff08; }
+.pb .slot[aria-pressed="true"] svg { transform: translateY(-18px); opacity: .22; }
+.pb .slot[aria-pressed="true"] .name::before { content: ""; display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--focus); margin-right: 6px; vertical-align: middle; }
+.pb .slot .key { display: none; }
+.pb .slot:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+
+/* desktop: the tray down the side, pencils lying flat and pointing at the paper (Final Five "side") */
+@media (min-width: 700px) {
+  .pb .desk { grid-template-columns: clamp(112px, 12.3cqw, 150px) minmax(0, 1fr); align-items: stretch; }
+  .pb .desk .box { order: -1; padding: 12px 10px 10px; grid-template-rows: auto 1fr; }
+  .pb .desk .box-top { display: grid; justify-items: center; gap: 6px; text-align: center; padding-top: 4px; }
+  .pb .desk .box-title { letter-spacing: .08em; }
+  .pb .desk .slots { grid-template-columns: 1fr; grid-auto-rows: 1fr; padding: 8px 6px; gap: 2px; }
+  .pb .desk .slot { padding: 6px 2px; align-content: center; }
+  .pb .desk .slot svg { width: 100%; max-width: 104px; height: 30px; }
+  .pb .desk .slot:hover svg { transform: translateX(6px); }
+  .pb .desk .slot[aria-pressed="true"] svg { transform: translateX(14px); }
+  .pb .desk .slot .name { font-size: 12px; }
+  .pb .desk .slot.nudge svg { animation-name: pbNudgeSide; }
+}
+/* phones: the tray as a row above the paper, pencils standing up */
+@media (max-width: 699px) {
+  .pb .desk .box { order: -1; padding: 10px 8px 8px; gap: 8px; }
+  .pb .slot svg { height: 76px; }
+  .pb .slot { font-size: 12px; }
+  .pb .slot[aria-pressed="true"] svg { transform: translateY(-12px); }
+}
+@media (prefers-reduced-motion: reduce) { .pb .slot.nudge svg { animation: none; } }
+
+/* the paper */
+.pb-area { min-width: 0; min-height: 0; display: grid; justify-items: center; align-items: start; }
+.pb-paper { position: relative; width: 100%; min-width: 0; border-radius: max(10px, 2cqw); overflow: hidden; background: var(--pb-paper); }
+.pb .stage { position: relative; width: 100%; touch-action: none; user-select: none; -webkit-user-select: none; background: var(--pb-paper); }
+.pb .stage.on-paper { cursor: none; }
+.pb .stage > * { position: absolute; inset: 0; width: 100%; height: 100%; display: block; pointer-events: none; }
+.pb .stage > .hint {
+  inset: auto; left: 16px; top: 14px; width: auto; height: auto; z-index: 2;
+  font: 500 12px/1 "Jost", system-ui, sans-serif; letter-spacing: .04em;
+  color: #3A3D42; background: #3A3D4212; border: 1px solid #3A3D4226; padding: 7px 11px; border-radius: 999px; transition: opacity .6s ease;
+}
+.pb .stage > .hint.gone { opacity: 0; }
+.pb .stage > .fps-badge { display: none; }
+.pb .stage > .sheet { z-index: 1; background: var(--pb-paper); box-shadow: 0 18px 40px #0003; will-change: transform; }
+.pb .stage > .sheet > * { position: absolute; inset: 0; width: 100%; height: 100%; }
+.pb .stage > .stub { z-index: 1; inset: 0 0 auto 0; height: 3.2%; background: #F3F0EA; filter: drop-shadow(0 1.5px 1px #0000001f); transition: opacity 1.2s ease 1.6s; }
+.pb .stage > .stub.fade { opacity: 0; }
+.pb .stage > #cursor { z-index: 2; }
+.pb .stage.unpicked #pencil { display: none; }
+/* over the round buttons: the pencil is put away at once (otherwise it glides off the paper on every hover) */
+.pb .stage.pb-over-controls #cursor { visibility: hidden; }
+.pb .stage.unpicked.on-paper { cursor: default; }
+
+/* round controls along the bottom of the paper */
+/* the row is one solid area (gaps included, plus 8px all round), so moving along or near it never counts as being back on the paper */
+.pb-controls { position: absolute; left: 8px; bottom: 8px; z-index: 3; display: flex; align-items: center; gap: 10px; width: max-content; padding: 8px; }
+/* labels: shown on hover (mouse) and keyboard focus; phones get the short message pill instead */
+.pb-rb { position: relative; }
+.pb-rb::after {
+  content: attr(data-tip); position: absolute; left: 50%; bottom: calc(100% + 8px); transform: translate(-50%, 4px);
+  padding: 5px 9px; border-radius: 999px; background: var(--pb-navy); color: #fff;
+  font: 500 12px/1 "Jost", system-ui, sans-serif; letter-spacing: .02em; white-space: nowrap;
+  opacity: 0; pointer-events: none; transition: opacity .15s ease, transform .15s ease;
+}
+.pb-rb:first-child::after { left: 0; transform: translate(0, 4px); }
+@media (hover: hover) { .pb-rb:hover::after { opacity: 1; transform: translate(-50%, 0); transition-delay: .25s; } .pb-rb:first-child:hover::after { transform: none; } }
+.pb-rb:focus-visible::after { opacity: 1; transform: translate(-50%, 0); }
+.pb-rb:first-child:focus-visible::after { transform: none; }
+.pb-rb {
+  all: unset; box-sizing: border-box; pointer-events: auto; cursor: pointer; flex: none;
+  width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center;
+  background: var(--pb-navy); color: #fff; transition: background .3s ease, color .3s ease, transform .3s ease;
+}
+.pb-rb svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.pb-rb:hover { background: var(--pb-hi); color: var(--pb-navy); transform: scale(1.04); }
+.pb-rb:active { transform: scale(.95); }
+.pb-rb:focus-visible { outline: 2px solid var(--pb-focus); outline-offset: 2px; }
+.pb-rb .off { display: none; }
+.pb-rb .pb-hand { transform-box: view-box; transform-origin: 12px 12px; transition: transform .25s ease; }
+.pb-rb.alt .pb-hand { transform: scaleX(-1); }   /* left hand: the same hand, mirrored */
+.pb-rb.alt .on { display: none; } .pb-rb.alt .off { display: inline; }   /* second icon: pencil (eraser in hand), crossed speaker (sound off) */
+.pb-status { position: absolute; z-index: 3; right: 16px; top: 14px; pointer-events: none; font: 500 12px/1.2 "Jost", system-ui, sans-serif; color: #3A3D42; background: #FAF8F4E6; border: 1px solid #3A3D4224; padding: 6px 10px; border-radius: 999px; transition: opacity .3s ease; }
+.pb-status:empty { opacity: 0; }
+@media (max-width: 699px) {
+  .pb-controls { left: 2px; bottom: 2px; gap: 8px; }
+  .pb-status { right: 10px; top: 10px; }
+}
+
+/* the playground's panel stays in the page for the engine to read its settings from, but never shows */
+.pb .panel[hidden] { display: none !important; }
+
+@media (prefers-reduced-motion: reduce) { .pb-lid, .pb-rb, .pb-pill { transition: none; } }
+
+/* ---------- phones: the open tin goes full screen ---------- */
+html.pb-locked, html.pb-locked body { overflow: hidden; overscroll-behavior: none; }
+.pb-full {
+  position: fixed; inset: 0; z-index: 1000; display: flex; background: var(--pb-tex), var(--pb-blue); background-blend-mode: soft-light, normal;
+  padding: max(6px, env(safe-area-inset-top)) max(6px, env(safe-area-inset-right)) max(6px, env(safe-area-inset-bottom)) max(6px, env(safe-area-inset-left));
+  overscroll-behavior: contain; touch-action: none; font-family: "Jost", system-ui, sans-serif; color: #000;
+}
+.pb-full[hidden] { display: none; }
+.pb-full > .pb-inner { flex: 1; min-height: 0; display: flex; flex-direction: column; border-radius: 18px; padding: 10px; }
+.pb-full .desk { flex: 1; min-height: 0; grid-template-rows: auto minmax(0, 1fr); gap: 10px; }
+.pb-full .pb-area { display: grid; place-items: center; }
+.pb-full .pb-paper { border-radius: 12px; }
+.pb-full .box { padding: 10px 8px 8px; }
+.pb-full .box-top { align-items: center; }
+@media (min-width: 700px) {   /* phone on its side: tray down the left as on desktop */
+  .pb-full .desk { grid-template-columns: 172px minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); }
+  .pb-full .desk .box { padding: 8px; gap: 8px; min-height: 0; }
+  .pb-full .desk .box-top { display: flex; flex-wrap: nowrap; justify-content: space-between; align-items: center; text-align: left; padding: 0 0 0 4px; }
+  .pb-full .desk .box-title { letter-spacing: .06em; }
+  .pb-full .desk .slots { padding: 4px 6px; gap: 0; min-height: 0; }
+  .pb-full .desk .slot { padding: 2px; gap: 2px; }
+  .pb-full .desk .slot .name { font-size: 11px; }
+}
+/* the close button, top right of the tray (full screen only): night glass, like the postcard's controls */
+.pb-x { display: none; }
+.pb-full .pb-x {
+  all: unset; box-sizing: border-box; cursor: pointer; display: grid; place-items: center; flex: none;
+  width: 36px; height: 36px; border-radius: 50%; margin: -4px -2px -4px auto;
+  background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.5); color: #fff; transition: background .3s ease, color .3s ease;
+}
+.pb-full .pb-x svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; }
+.pb-full .pb-x:hover { background: var(--pb-hi); color: var(--pb-navy); border-color: transparent; }
+.pb-full .pb-x:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+
+/* phones: while the lid opens and closes, the box shows a small copy of the paper */
+.pb-peek { all: unset; box-sizing: border-box; position: absolute; inset: max(5px, .65cqw); cursor: pointer;
+  border-radius: max(12px, 3.2cqw); background: var(--pb-tex), var(--pb-navy); background-blend-mode: soft-light, normal; padding: 10px; display: grid; }
+.pb-peek[hidden] { display: none; }
+.pb-peek canvas { position: absolute; inset: 10px; width: calc(100% - 20px); height: calc(100% - 20px); display: block; border-radius: 10px; background: var(--pb-paper); }
+.pb-more { margin: -6px 0 0; font-size: clamp(15px, 1.11vw, 16px); line-height: 1.4; text-align: center; }
+/* like the postcard's "See my portfolio": bold black on the band, the pastel as a pill behind it on hover */
+
+/* inside of the lid (v22): the back of the front's raised artwork, pressed in and upside down (the lid has flipped
+   over on its bottom hinges). Lit from the top-left like the front: a deep-blue line just inside each shape's top-left
+   edge, a faint cream line just outside its bottom-right edge, the floor of each dip a touch darker. */
+.pb-reverse { position: absolute; inset: 0; width: 100%; height: 100%; display: block; pointer-events: none; }
+.pb-s-plate { filter: url(#pbS-plate); }
+.pb-s-letters { filter: url(#pbS-letters); }
+.pb-s-dots { filter: url(#pbS-dots); }
+.pb-s-vine { filter: url(#pbS-vine); }
+.pb-note { align-content: end; padding-bottom: max(14px, 3.4cqw); }   /* Close tin at the bottom of the lid (Fiona, 13 Nov: the middle and the top were tried) */
+.pb-pills { position: relative; z-index: 1; margin-top: 0; }
+.pb-lid { will-change: transform; }
+.pb-reverse .pb-join { display: none; }   /* as approved in the experiment: the letters without the joined depth */
+
+/* closing (Fiona, 13 Nov): tap anywhere on the open lid, as you tapped the closed one to open it; it lifts a little
+   on hover. "× Close box" under the tin as a just-in-case instruction (like "Tap the box to open" above it). */
+@media (hover: hover) { .pb-tin[data-state="open"] .pb-lid:hover { transform: translateY(var(--d, 0px)) rotateX(-175deg); } }
+.pb-more { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px 28px; }
+.pb-close-text { all: unset; cursor: pointer; color: #000; font-weight: 700; padding: 4px 12px; margin: -4px -12px; border-radius: 999px; transition: background .3s ease; }
+.pb-more[hidden] { display: none; }
+.pb-close-text:hover, .pb-close-text:focus-visible { background: var(--pb-hi); color: #0F2D47; }
+.pb-close-text:focus-visible { outline: 2px solid #0F2D47; outline-offset: 2px; }

@@ -19,6 +19,7 @@
     
     <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="postcard.css">
+    <link rel="stylesheet" href="pencilbox.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Flamenco:wght@300&family=Jost:ital,wght@0,400;0,500;0,700;1,400;1,700&display=swap" rel="stylesheet">
@@ -120,6 +121,15 @@
                 <h2 id="play-title" class="section-title">PLAY</h2>
 
                 <div class="play-cards">
+                    <!-- Pencil Box (built by pencilbox.js, styled by pencilbox.css) -->
+                    <article class="pb-card pb" id="pbCard" aria-labelledby="pbTitle">
+                        <header class="pb-head">
+                            <p class="pb-label">Pencil Box</p>
+                            <h3 class="pb-title" id="pbTitle">Tap the box to open</h3>
+                        </header>
+                        <div data-pencilbox></div>
+                    </article>
+
                     <!-- Postcard from Edinburgh (built by postcard.js, styled by postcard.css) -->
                     <article class="pc-card" aria-labelledby="pc-title">
                         <div class="pc-head">
@@ -230,5 +240,6 @@
 
     <script src="script.js"></script>
     <script src="postcard.js" defer></script>
+    <script src="pencilbox.js" defer></script>
 </body>
 </html>
