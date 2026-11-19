@@ -127,7 +127,10 @@
 @keyframes pbNudgeSide { 40% { transform: translateX(8px); } 100% { transform: none; } }
 .pb .slot[aria-pressed="true"] { color: var(--ink); background: #ffffff08; }
 .pb .slot[aria-pressed="true"] svg { transform: translateY(-18px); opacity: .22; }
-.pb .slot[aria-pressed="true"] .name::before { content: ""; display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--focus); margin-right: 6px; vertical-align: middle; }
+.pb .slot .name { position: relative; white-space: nowrap; }
+/* the picked pencil's dot hangs to the left of its name, outside the text, so a longer name never wraps onto a second
+   line (which made the tray taller and the paper shrink between pencils on small phones; Fiona, 19 Nov) */
+.pb .slot[aria-pressed="true"] .name::before { content: ""; position: absolute; right: 100%; top: 50%; width: 6px; height: 6px; margin: -3px 5px 0 0; border-radius: 50%; background: var(--focus); }
 .pb .slot .key { display: none; }
 .pb .slot:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 
@@ -280,3 +283,8 @@ html.pb-locked, html.pb-locked body { overflow: hidden; overscroll-behavior: non
 .pb-more[hidden] { display: none; }
 .pb-close-text:hover, .pb-close-text:focus-visible { background: var(--pb-hi); color: #0F2D47; }
 .pb-close-text:focus-visible { outline: 2px solid #0F2D47; outline-offset: 2px; }
+
+/* phones, while the box is full screen: the other Play cards (the postcard's animated sky) are moved out of view
+   behind it, so they pause and the box opens and draws smoothly (19 Nov). Nothing visible changes; the page
+   behind is covered and locked. */
+html.pb-locked .play-cards > :not(.pb-card) { transform: translateX(-300vw); }
