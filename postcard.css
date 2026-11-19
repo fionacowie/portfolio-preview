@@ -35,7 +35,7 @@
     gap: clamp(20px, 3vw, 32px);
     width: 100vw;
     margin-left: calc(50% - 50vw);
-    padding: clamp(24px, 3.5vw, 40px) var(--pc-side) clamp(28px, 3.5vw, 40px);
+    padding: clamp(24px, 3.5vw, 40px) var(--pc-side) clamp(28px, 3.5vw, 44px);
     background: linear-gradient(135deg, var(--pc-bg1), var(--pc-bg2));
     transition: --pc-bg1 1.2s ease, --pc-bg2 1.2s ease, --pc-sky-a 1.2s ease, --pc-sky-b 1.2s ease;
 }
@@ -53,9 +53,9 @@
     opacity: var(--pc-grain, 0.35);
 }
 
-/* the thin black frame round the postcard (your button outline weight) */
+/* the black frame round the postcard: the case study cards' outline (5px, 19 Nov) */
 .pc-card.pc-framed .pc-postcard {
-    box-shadow: 0 0 0 clamp(2px, 0.21vw, 3px) var(--pc-ink);
+    box-shadow: 0 0 0 5px var(--pc-ink);
 }
 
 /* sized like the rest of the home page: label as the case-study meta text, title as the About card headings */
@@ -269,7 +269,7 @@
     border: var(--pc-edge) solid var(--pc-ink);
     color: var(--pc-ink);
     font-family: inherit;
-    font-weight: 400;
+    font-weight: var(--pc-label-weight, 500);
     font-size: 14px;
     text-transform: uppercase;
     letter-spacing: 0.08em;
@@ -308,7 +308,9 @@
        not a letterbox); on a big screen the sky is about 1.75 : 1 */
     .pc-card {
         --pc-strip: 88px;                  /* postcard.js reads this and adds that much ground below the skyline */
-        --pc-room: 200px;                  /* heading + the card's padding, so heading and postcard fit one screen */
+        --pc-room: 192px;                  /* heading + the card's padding, so heading and postcard fit one screen */
+        min-height: 100svh;                /* the band fills the screen once the top bar slides away; postcard centred in it */
+        align-content: center;
         --pc-w: max(min(calc(100vw - 2 * var(--pc-side)), 1200px, calc((100svh - var(--pc-room) - var(--pc-strip)) * 2)),
                     min(calc(100vw - 2 * var(--pc-side)), 560px));
     }
@@ -408,6 +410,29 @@
 }
 /* SHARE on hover: filled with the sky's own pastel, navy words (as before) */
 .pc-card:not(.pc-flat) .pc-body > .pc-controls .pc-share:hover { background: var(--pc-sky-hi, var(--pc-hover)); color: #0A1F3A; transform: scale(1.02); }
+/* SHARE always carries the sky's pastel (19 Nov, Fiona: lifts things); hover = a deeper version of it that grows a
+   little, like the site's buttons. Only the pastel layer grows (by 2px each side, no scaling), so the lettering never
+   moves or softens (scaling text blurred it on standard-resolution monitors). */
+.pc-card:not(.pc-flat) .pc-body > .pc-controls .pc-share:not([aria-busy="true"]) {
+    background: transparent;
+    box-shadow: none;
+    overflow: visible;                     /* so the pastel can grow past the edge */
+    color: #0A1F3A;
+    -webkit-font-smoothing: auto; -moz-osx-font-smoothing: auto;   /* navy on pastel: normal smoothing */
+}
+.pc-card:not(.pc-flat) .pc-body > .pc-controls .pc-share:not([aria-busy="true"])::after {
+    display: block;
+    inset: 0;
+    background: var(--pc-sky-hi, var(--pc-hover));
+    opacity: 1;
+    box-shadow: var(--g-edge);
+    transition: inset 0.3s ease, box-shadow 0.3s ease;
+}
+.pc-card:not(.pc-flat) .pc-body > .pc-controls .pc-share:not([aria-busy="true"]):hover { background: transparent; box-shadow: none; transform: none; }
+.pc-card:not(.pc-flat) .pc-body > .pc-controls .pc-share:not([aria-busy="true"]):hover::after {
+    inset: -2px;
+    box-shadow: var(--g-edge), inset 0 0 0 999px rgba(10, 31, 58, 0.14);
+}
 /* focus: the rim becomes an even, softer white line (60%), 1.5px */
 .pc-card:not(.pc-flat) .pc-body > .pc-controls :is(.pc-field-row:focus-within, .pc-share:focus-visible) {
     outline: none;
@@ -458,7 +483,7 @@
         flex-wrap: nowrap;
         margin-bottom: calc((var(--pc-strip) - 40px) / 2);
     }
-    .pc-field { width: 420px; }
+    .pc-field { width: clamp(260px, calc(var(--pc-w) - 380px), 420px); }   /* narrower on small postcards, so the row always fits */
     .pc-field-row { height: 40px; }
     .pc-send { width: 30px; height: 30px; }
     .pc-help { position: absolute; top: calc(100% + 3px); left: 0; right: 0; font-size: 13px; line-height: 1.2; color: rgba(255, 255, 255, 0.72); }
@@ -475,24 +500,24 @@
     padding: 0 22px;
     border-radius: 999px;
     background: transparent;
-    border: 1px solid #0A1F3A;
-    color: #0A1F3A;
+    border: clamp(2px, 0.21vw, 3px) solid #000;   /* the site's CTA border (19 Nov) */
+    color: #000;
     font-family: inherit;
-    font-weight: 400;
+    font-weight: var(--pc-label-weight, 500);
     font-size: 15px;
     text-transform: uppercase;
     letter-spacing: 0.08em;
     white-space: nowrap;
     cursor: pointer;
-    transition: background 0.3s ease, border-color 0.3s ease, color 0.3s ease, transform 0.3s ease;
+    transition: background 0.3s ease, border-color 0.3s ease, color 0.3s ease, transform 0.3s ease, box-shadow 0.3s ease;
 }
-.pc-btn:not(:disabled):hover { background: var(--pc-sky-hi, var(--pc-hover)); border-color: #0A1F3A; color: #0A1F3A; transform: scale(1.02); }
-.pc-btn:focus-visible { outline: none; box-shadow: inset 0 0 0 1px #0A1F3A; }   /* the edge goes 2px: one clean line */
+.pc-btn:not(:disabled):hover { background: var(--pc-sky-hi, var(--pc-hover)); border-color: #000; color: #000; box-shadow: 0 0 0 1px #000; }   /* the site's CTA hover, scaled to these smaller buttons: the border grows by 1px; no scaling, so the text stays crisp */
+.pc-btn:focus-visible { outline: 2px solid var(--pc-focus, #FF5D3C); outline-offset: 2px; }   /* the site's coral focus ring */
 .pc-btn:disabled { opacity: 0.4; cursor: default; }
 .pc-btn[hidden] { display: none; }
 /* the main action, and "Write your own" on the received view: the navy pill */
-.pc-btn.pc-save, .pc-btn.pc-share-video, a.pc-btn.pc-own { background: #0A1F3A; color: #fff; text-decoration: none; }
-.pc-btn.pc-save:focus-visible, .pc-btn.pc-share-video:focus-visible, a.pc-btn.pc-own:focus-visible { outline: 2px solid #0A1F3A; outline-offset: 3px; box-shadow: none; }
+.pc-btn.pc-save, .pc-btn.pc-share-video, a.pc-btn.pc-own { background: #0A1F3A; border-color: #000; color: #fff; text-decoration: none; }
+.pc-btn.pc-save:focus-visible, .pc-btn.pc-share-video:focus-visible, a.pc-btn.pc-own:focus-visible { outline: 2px solid var(--pc-focus, #FF5D3C); outline-offset: 2px; }
 
 /* ---------- shared view: someone opened a postcard link (postcard.html only) ---------- */
 .pc-viewer-bar { display: none; }
@@ -580,13 +605,13 @@
     height: 40px;
     box-sizing: border-box;
     padding: 0 16px;
-    border: 1px solid rgba(10, 31, 58, 0.45);
+    border: clamp(2px, 0.21vw, 3px) solid #000;   /* matches the buttons beside it */
     border-radius: 999px;
     background: #fff;
     color: #0A1F3A;
     font-size: 14px;
 }
-.pc-link:focus-visible { outline: none; border-color: #0A1F3A; box-shadow: inset 0 0 0 1px #0A1F3A; }
+.pc-link:focus-visible { outline: 2px solid var(--pc-focus, #FF5D3C); outline-offset: 2px; }
 
 .pc-sheet-media {
     position: relative;
@@ -642,3 +667,31 @@
     .pc-page .pc-card { --pc-room: 220px; }
     .pc-page .pc-card.pc-viewer { --pc-room: 290px; }
 }
+
+/* ---------- corners (19 Nov, to try): CARD.corners 'round' (default) | 'sharp' (field, SHARE and the pills) | 'square' (also the sky and send buttons) ----------
+   Square-cornered like the site's own CTA buttons. */
+:is(.pc-card, .pc-sheet).pc-sharp :is(.pc-field-row, .pc-share, .pc-btn, .pc-link),
+:is(.pc-card, .pc-sheet).pc-sharp .pc-byline a,
+.pc-sheet.pc-sharp .pc-sheet-card,
+.pc-sheet.pc-sharp .pc-sheet-media { border-radius: 0; }
+.pc-card.pc-sharp.pc-square :is(.pc-swatch, .pc-send) { border-radius: 0; }
+
+/* square postcard (19 Nov): with sharp corners, the postcard itself is square-cornered like a printed card */
+.pc-card.pc-sharp .pc-postcard { border-radius: 0; }
+
+/* ---------- home page, laptops and up (19 Nov): comfortable space round the postcard ----------
+   The band can be taller than the screen; the postcard keeps its earlier size (it fits one screen with its heading).
+   Generous room above the heading and below the postcard, so nothing feels cramped or cut off while scrolling. */
+@media (min-width: 601px) {
+    .play .pc-card:not(.pc-viewer) {
+        --pc-room: 200px;
+        min-height: 0;
+        padding-top: clamp(56px, 5vw, 80px);
+        padding-bottom: clamp(88px, 8vw, 120px);
+        gap: clamp(28px, 2.5vw, 36px);
+        align-content: start;
+    }
+}
+
+/* the share icon's line weight follows the label weight (CARD.labelWeight), so icon and word look equally heavy */
+.pc-share > svg:not(.pc-ring) path { stroke-width: var(--pc-icon-stroke, 1.7); }

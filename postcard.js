@@ -33,7 +33,7 @@
     //           all over the postcard catching the light now and then with a soft round twinkle
     //  dust:    the writing star sheds a fine trail of the same twinkles that drift down and fade
     // In the video too. With reduced motion the flecks stay, without the twinkle.
-    sparkle: { glitter: { on: true, flecks: .2, sky: 1.5, twinkle: 1, size: 1.65, fade: .8 },   // fade: how much the glitter softens from the top of the postcard to the bottom   // Fiona's settings, 11 Nov; sky is its own amount (.09 was the first look)
+    sparkle: { glitter: { on: true, flecks: 3, sky: 1.5, twinkle: 8, size: 1.15, fade: 1 },   // Fiona, 19 Nov (stronger);   // fade: how much the glitter softens from the top of the postcard to the bottom   // Fiona's settings, 11 Nov; sky is its own amount (.09 was the first look)
                dust:    { on: true, rate: 55, life: 1.4, fall: 16, size: 1 } },
     grain:   { on: true, amount: .2, size: .5, roughness: 1 },
     milkyWay: { on: true, strength: .7 },
@@ -43,7 +43,7 @@
     // letterPx: smallest capital height on screen, [landscape postcard, portrait (phone) postcard]
     // Phones (portrait): focusX centres the crop (artboard x); skylineScale enlarges just the skyline, anchored at the
     // bottom of the drawing around focusX, so the buildings read larger while the sky keeps its framing.
-    view: { crop: 'city', skyTop: -26, maxHeight: 1152, belowDetail: 18, narrowGround: 1, letterPx: [20, 16], spiral: true,
+    view: { wideFrame: 1.75, crop: 'city', skyTop: -26, maxHeight: 1152, belowDetail: 18, narrowGround: 1, letterPx: [20, 16], spiral: true,
             focusX: 827, skylineScale: 1.6 },   // chosen 9 Nov: crop C (3:4), skyline 1.6×, the Old Town group centred under the lettering
     phone: { drop: .045, letterY: .56 },   // portrait: skyline lowered by this share of the postcard's height; the arc's height in the sky (0 top … 1 bottom)
     // pale light low behind the buildings: a wide soft ellipse centred on the city, just above the roofs (artboard units)
@@ -60,6 +60,8 @@
   // Each style has a base pair and one pair per sky; `follow` (0–1) is how far the card moves from base towards the sky's pair.
   const CARD = {
     style: 'sky', follow: 1, grain: .3, grainSize: 160, frame: true,
+    corners: 'sharp',   // 'round' | 'sharp' (field, SHARE, pills; Fiona, 19 Nov) | 'square' (also sky and send buttons)
+    labelWeight: 700,   // SHARE and the share window's buttons: 400 regular, 500 medium, 700 bold (Fiona, 19 Nov); icons follow
     glassGrain: .35,   // Fiona, 12 Nov; grain showing through the glass field and SHARE (0 = smooth glass, 1 = about the postcard's own)
     styles: {
       // Fiona's choice (6 Nov): pale, sky-tinted top-left into a bright blue, following the postcard's colours
@@ -229,6 +231,8 @@
     card.style.setProperty('--pc-grain', CARD.grain);
     card.style.setProperty('--pc-grain-size', CARD.grainSize + 'px');
     card.style.setProperty('--pc-glass-grain', CARD.glassGrain);
+    for (const e of [card, sheet]){ e.style.setProperty('--pc-label-weight', CARD.labelWeight); e.style.setProperty('--pc-icon-stroke', ({ 400: 1.7, 500: 2, 700: 2.5 })[CARD.labelWeight] || 2); }
+    for (const e of [card, sheet]){ e.classList.toggle('pc-sharp', CARD.corners !== 'round'); e.classList.toggle('pc-square', CARD.corners === 'square'); }
     card.classList.toggle('pc-framed', CARD.frame);
     // the sky's own pastel (its glow into its horizon), for the SHARE button's highlight
     const p = SKY.palettes[i] || SKY.palettes[0];
@@ -490,6 +494,14 @@
     const belowRoof = (x, y) => { const i = Math.round((x - XL) / 2); return y >= (i < 0 ? ys(378) : i >= roof.length ? ys(661) : roof[i]); };
     const lowestRoof = (x0, x1) => { let m = 0; for (let i = Math.max(0, Math.floor((x0 - XL) / 2)); i <= Math.min(roof.length - 1, Math.ceil((x1 - XL) / 2)); i++) m = Math.max(m, roof[i]); return m; };
     // which part of the artboard the postcard shows: bottom pinned, never stretched
+    // Wide postcards (laptops) keep the side-to-side framing of a 1.75:1 sky (Fiona's bigger-screen view, 19 Nov):
+    // anything wider trims a little sky from the top rather than showing more of the hills at the sides.
+    function viewFramed(bw, bh){
+      const A = 0;   // (v37's top trim, dropped: the top of the sky is the most important part)
+      if (!A || bw / bh <= A) return view(bw, bh);
+      const v = view(bw, bw / A), vh = bh / v.k;
+      return { x: v.x, y: v.y + v.h - vh, w: v.w, h: vh, k: v.k };
+    }
     function view(bw, bh){
       const S = SKY.view, a = bw / bh, top = S.skyTop, full = H - top;
       const bottomFor = (x0, x1) => Math.min(H, lowestRoof(x0, x1) + S.belowDetail);
@@ -561,11 +573,16 @@
     function size(){
       const b = root.getBoundingClientRect(); if (!b.width || !b.height) return;
       dpr = Math.min(b.width > 1100 ? 1.5 : DPR_CAP, window.devicePixelRatio || 1);   // big postcards: a little lighter
-      const S = SKY.view, wantS = b.width < b.height ? (S.skylineScale || 1) : 1, wantCx = S.focusX ?? FOCUS[S.crop] ?? 810;
+      const S = SKY.view, skyA = b.width / Math.max(1, b.height - stripPx());
+      // Phones: skylineScale. Wide postcards (laptops): enlarge just the skyline so the hills frame the city as they do on a
+      // 1.75:1 sky (Fiona's bigger screen), keeping all of the sky (19 Nov). Stepped so resizing doesn't rebuild constantly.
+      const wantS = b.width < b.height ? (S.skylineScale || 1)
+        : S.wideFrame && skyA > S.wideFrame ? Math.min(1.35, Math.round(skyA / S.wideFrame * 25) / 25) : 1;
+      const wantCx = S.focusX ?? FOCUS[S.crop] ?? 810;
       if (wantS !== skyS || (wantS !== 1 && wantCx !== skyCx)){ scaleSkyline(wantS, wantCx); bgDone = false; fitIn = ''; }
       const strip = stripPx(), tall = b.width < b.height;
       const drop = tall ? Math.min(strip, SKY.phone.drop * b.height) : 0;   // phones: the skyline sits a little lower, over the ground strip
-      V = view(b.width, b.height - strip + drop);
+      V = viewFramed(b.width, b.height - strip + drop);
       groundU = (strip - drop) / V.k;
       if (groundU > 0) V = { ...V, h: V.h + groundU };               // extra ground below for the controls
       if (!sidesMade && (V.x < -2 || V.x + V.w > W + 2)) makeSides();
@@ -661,7 +678,7 @@
       // about 30 a second at twinkle 1 on a laptop-sized postcard; each a slow soft glint (0.5–1.2 s)
       const area = twCv.width * twCv.height / (dpr * dpr) / 614400;
       let n = 30 * Gl.twinkle * Math.max(.4, area) * dt + twCarry; twCarry = n % 1; n = Math.floor(n);
-      while (n-- > 0 && twinkles.length < 150){
+      while (n-- > 0 && twinkles.length < 260){
         let f = flecks[Math.floor(Math.random() * flecks.length)];
         if (!f[2] && Math.random() < .5) f = flecks[Math.floor(Math.random() * flecks.length)];   // lean towards the hills and roofs
         twinkles.push({ x: f[0], y: f[1], k: .3 + .7 * f[4], t0: now, life: 500 + Math.random() * 700, r: (2 + Math.random() * 2.6) * Gl.size * dpr * (f[3] ? 1.3 : f[2] ? 1 : .8),

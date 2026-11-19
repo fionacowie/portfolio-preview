@@ -11,7 +11,7 @@
 .pb {
   --pb-blue: #5B8BEF; --pb-navy: #0F2D47; --pb-paper: #FAF8F4;
   --pb-hi: linear-gradient(135deg, #CCDCFB 0%, #FFD1F6 60%, #FFEAA6 100%);   /* hover: always the Flowers pencil's pastel (blue → pink → gold) */
-  --pb-focus: #FF5D3C;
+  --pb-focus: #0F2D47;   /* focus on light grounds: navy (Fiona chose B, 19 Nov; the site uses coral) */
 }
 /* =====================================================================================================
    PENCIL BOX CARD: everything below is scoped to .pb-card (classes start pb-), like the postcard (pc-)
@@ -78,7 +78,9 @@
 .pb-face.inside .pb-grain { opacity: .18; }
 .pb-shade { position: absolute; inset: 0; background: #0B1B2E; opacity: 0; pointer-events: none; }
 .pb-open { position: absolute; inset: 0; width: 100%; border: 0; padding: 0; margin: 0; background: transparent; cursor: pointer; border-radius: var(--r); }
-.pb-open:focus-visible { outline: 3px solid #fff; outline-offset: -10px; }
+.pb-open:focus-visible { outline: none; }
+/* the lid's focus: the navy ring just outside the lid, on the band (19 Nov) */
+.pb-lid:has(.pb-open:focus-visible) { outline: 2px solid var(--pb-focus); outline-offset: 4px; border-radius: var(--r); }
 .pb-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
 /* inside of the lid: navy band, blue panel, the swallows and the author's note */
@@ -95,17 +97,6 @@
   padding-bottom: max(6px, .9cqw); border-bottom: max(1.5px, .16cqw) solid currentColor; }
 .pb-mark-line { font-weight: 500; font-size: max(9px, 1.4cqw); letter-spacing: .3em; margin-right: -.3em; line-height: 1; }
 /* phones: the lid only swings past on the way to full screen, so its inside is just the swallows */
-.pb-tin[data-mode="full"] .pb-pills { display: none; }
-.pb-pills { display: flex; flex-wrap: wrap; justify-content: center; gap: max(8px, 1.2cqw); margin-top: max(6px, 1.8cqw); }
-.pb-pill {
-  all: unset; box-sizing: border-box; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: .4em;
-  height: max(30px, 2.6cqw); padding: 0 max(14px, 1.5cqw); border-radius: 999px;
-  background: rgba(251, 249, 245, .5); color: #000;
-  font: 500 max(12px, 1.25cqw)/1 "Jost", system-ui, sans-serif; text-transform: uppercase; letter-spacing: .04em; white-space: nowrap;
-  transition: background .3s ease, transform .3s ease;
-}
-.pb-pill:hover { background: var(--pb-hi); transform: scale(1.02); }
-.pb-pill:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
 
 /* ---------- inside the box: Final Five's tray and paper (its styles, unchanged apart from the font) ---------- */
 .pb .desk { display: grid; gap: max(8px, 1.3cqw); }
@@ -116,6 +107,8 @@
 }
 .pb .box-top { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 4px 16px; }
 .pb .box-note { color: var(--muted); font-size: 14px; }
+/* light text on the navy tray: thinner smoothing on Macs */
+.pb .desk { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
 .pb .box-title { font: 500 11px/1 "Jost", system-ui, sans-serif; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); transition: opacity .4s ease; }
 .pb .box-title.swap { opacity: 0; }
 .pb .slots { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; background: var(--pb-tex), #0A1829; background-blend-mode: soft-light, normal; border-radius: 8px; padding: 10px 8px 6px; box-shadow: inset 0 6px 14px #0009; }
@@ -132,7 +125,7 @@
    line (which made the tray taller and the paper shrink between pencils on small phones; Fiona, 19 Nov) */
 .pb .slot[aria-pressed="true"] .name::before { content: ""; position: absolute; right: 100%; top: 50%; width: 6px; height: 6px; margin: -3px 5px 0 0; border-radius: 50%; background: var(--focus); }
 .pb .slot .key { display: none; }
-.pb .slot:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.pb .slot:focus-visible { outline: 1.5px solid rgba(255, 255, 255, .6); outline-offset: 2px; }   /* on navy: a soft white line (19 Nov) */
 
 /* desktop: the tray down the side, pencils lying flat and pointing at the paper (Final Five "side") */
 @media (min-width: 700px) {
@@ -166,9 +159,10 @@
 .pb .stage > .hint {
   inset: auto; left: 16px; top: 14px; width: auto; height: auto; z-index: 2;
   font: 500 12px/1 "Jost", system-ui, sans-serif; letter-spacing: .04em;
-  color: #3A3D42; background: #3A3D4212; border: 1px solid #3A3D4226; padding: 7px 11px; border-radius: 999px; transition: opacity .6s ease;
+  color: #3A3D42; background: #3A3D4212; border: 1px solid #3A3D4226; padding: 7px 11px; border-radius: 0; transition: opacity .6s ease;   /* square, like the postcard (19 Nov) */
 }
 .pb .stage > .hint.gone { opacity: 0; }
+.pb .stage > .hint:empty { display: none; }
 .pb .stage > .fps-badge { display: none; }
 .pb .stage > .sheet { z-index: 1; background: var(--pb-paper); box-shadow: 0 18px 40px #0003; will-change: transform; }
 .pb .stage > .sheet > * { position: absolute; inset: 0; width: 100%; height: 100%; }
@@ -187,7 +181,7 @@
 .pb-rb { position: relative; }
 .pb-rb::after {
   content: attr(data-tip); position: absolute; left: 50%; bottom: calc(100% + 8px); transform: translate(-50%, 4px);
-  padding: 5px 9px; border-radius: 999px; background: var(--pb-navy); color: #fff;
+  padding: 5px 9px; border-radius: 0; background: var(--pb-hi); color: var(--pb-navy);   /* the hovered button's pastel, navy words (19 Nov) */
   font: 500 12px/1 "Jost", system-ui, sans-serif; letter-spacing: .02em; white-space: nowrap;
   opacity: 0; pointer-events: none; transition: opacity .15s ease, transform .15s ease;
 }
@@ -195,6 +189,8 @@
 @media (hover: hover) { .pb-rb:hover::after { opacity: 1; transform: translate(-50%, 0); transition-delay: .25s; } .pb-rb:first-child:hover::after { transform: none; } }
 .pb-rb:focus-visible::after { opacity: 1; transform: translate(-50%, 0); }
 .pb-rb:first-child:focus-visible::after { transform: none; }
+/* after a click, the label goes until the pointer leaves the button; next hover shows the new wording (19 Nov) */
+.pb-rb.pb-tip-off::after { opacity: 0 !important; transition: none !important; }
 .pb-rb {
   all: unset; box-sizing: border-box; pointer-events: auto; cursor: pointer; flex: none;
   width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center;
@@ -208,7 +204,7 @@
 .pb-rb .pb-hand { transform-box: view-box; transform-origin: 12px 12px; transition: transform .25s ease; }
 .pb-rb.alt .pb-hand { transform: scaleX(-1); }   /* left hand: the same hand, mirrored */
 .pb-rb.alt .on { display: none; } .pb-rb.alt .off { display: inline; }   /* second icon: pencil (eraser in hand), crossed speaker (sound off) */
-.pb-status { position: absolute; z-index: 3; right: 16px; top: 14px; pointer-events: none; font: 500 12px/1.2 "Jost", system-ui, sans-serif; color: #3A3D42; background: #FAF8F4E6; border: 1px solid #3A3D4224; padding: 6px 10px; border-radius: 999px; transition: opacity .3s ease; }
+.pb-status { position: absolute; z-index: 3; right: 16px; top: 14px; pointer-events: none; font: 500 12px/1.2 "Jost", system-ui, sans-serif; color: #3A3D42; background: #FAF8F4E6; border: 1px solid #3A3D4224; padding: 6px 10px; border-radius: 0; transition: opacity .3s ease; }
 .pb-status:empty { opacity: 0; }
 @media (max-width: 699px) {
   .pb-controls { left: 2px; bottom: 2px; gap: 8px; }
@@ -218,16 +214,19 @@
 /* the playground's panel stays in the page for the engine to read its settings from, but never shows */
 .pb .panel[hidden] { display: none !important; }
 
-@media (prefers-reduced-motion: reduce) { .pb-lid, .pb-rb, .pb-pill { transition: none; } }
+@media (prefers-reduced-motion: reduce) { .pb-lid, .pb-rb, .pb-close-text { transition: none; } }
 
 /* ---------- phones: the open tin goes full screen ---------- */
 html.pb-locked, html.pb-locked body { overflow: hidden; overscroll-behavior: none; }
 .pb-full {
-  position: fixed; inset: 0; z-index: 1000; display: flex; background: var(--pb-tex), var(--pb-blue); background-blend-mode: soft-light, normal;
+  position: fixed; inset: 0; z-index: 1000; display: flex;
   padding: max(6px, env(safe-area-inset-top)) max(6px, env(safe-area-inset-right)) max(6px, env(safe-area-inset-bottom)) max(6px, env(safe-area-inset-left));
   overscroll-behavior: contain; touch-action: none; font-family: "Jost", system-ui, sans-serif; color: #000;
 }
 .pb-full[hidden] { display: none; }
+/* the blue edge is its own layer: it grows out of the box on its own while the tray and paper fade in (19 Nov) */
+.pb-full-bg { position: absolute; inset: 0; z-index: -1; background: var(--pb-tex), var(--pb-blue); background-blend-mode: soft-light, normal; }
+.pb-full { isolation: isolate; }
 .pb-full > .pb-inner { flex: 1; min-height: 0; display: flex; flex-direction: column; border-radius: 18px; padding: 10px; }
 .pb-full .desk { flex: 1; min-height: 0; grid-template-rows: auto minmax(0, 1fr); gap: 10px; }
 .pb-full .pb-area { display: grid; place-items: center; }
@@ -252,14 +251,14 @@ html.pb-locked, html.pb-locked body { overflow: hidden; overscroll-behavior: non
 }
 .pb-full .pb-x svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; }
 .pb-full .pb-x:hover { background: var(--pb-hi); color: var(--pb-navy); border-color: transparent; }
-.pb-full .pb-x:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+.pb-full .pb-x:focus-visible { outline: 1.5px solid rgba(255, 255, 255, .6); outline-offset: 2px; }   /* on navy: a soft white line (19 Nov) */
 
 /* phones: while the lid opens and closes, the box shows a small copy of the paper */
 .pb-peek { all: unset; box-sizing: border-box; position: absolute; inset: max(5px, .65cqw); cursor: pointer;
   border-radius: max(12px, 3.2cqw); background: var(--pb-tex), var(--pb-navy); background-blend-mode: soft-light, normal; padding: 10px; display: grid; }
 .pb-peek[hidden] { display: none; }
 .pb-peek canvas { position: absolute; inset: 10px; width: calc(100% - 20px); height: calc(100% - 20px); display: block; border-radius: 10px; background: var(--pb-paper); }
-.pb-more { margin: -6px 0 0; font-size: clamp(15px, 1.11vw, 16px); line-height: 1.4; text-align: center; }
+.pb-more { margin: 0; text-align: center; }
 /* like the postcard's "See my portfolio": bold black on the band, the pastel as a pill behind it on hover */
 
 /* inside of the lid (v22): the back of the front's raised artwork, pressed in and upside down (the lid has flipped
@@ -271,7 +270,6 @@ html.pb-locked, html.pb-locked body { overflow: hidden; overscroll-behavior: non
 .pb-s-dots { filter: url(#pbS-dots); }
 .pb-s-vine { filter: url(#pbS-vine); }
 .pb-note { align-content: end; padding-bottom: max(14px, 3.4cqw); }   /* Close tin at the bottom of the lid (Fiona, 13 Nov: the middle and the top were tried) */
-.pb-pills { position: relative; z-index: 1; margin-top: 0; }
 .pb-lid { will-change: transform; }
 .pb-reverse .pb-join { display: none; }   /* as approved in the experiment: the letters without the joined depth */
 
@@ -279,10 +277,16 @@ html.pb-locked, html.pb-locked body { overflow: hidden; overscroll-behavior: non
    on hover. "× Close box" under the tin as a just-in-case instruction (like "Tap the box to open" above it). */
 @media (hover: hover) { .pb-tin[data-state="open"] .pb-lid:hover { transform: translateY(var(--d, 0px)) rotateX(-175deg); } }
 .pb-more { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px 28px; }
-.pb-close-text { all: unset; cursor: pointer; color: #000; font-weight: 700; padding: 4px 12px; margin: -4px -12px; border-radius: 999px; transition: background .3s ease; }
+.pb-close-text {   /* a quiet link, like the postcard's "See my portfolio": bold words, the pastel behind them on hover, square corners (19 Nov) */
+  all: unset; box-sizing: border-box; cursor: pointer; display: inline-flex; align-items: center; gap: 7px;
+  padding: 4px 10px; margin: -4px -10px; color: #000;
+  font: 700 clamp(15px, 1.11vw, 16px)/1.4 "Jost", system-ui, sans-serif; white-space: nowrap;
+  transition: background .3s ease, color .3s ease;
+}
+.pb-close-text svg { width: 13px; height: 13px; flex: none; fill: none; stroke: currentColor; stroke-width: 2.5; stroke-linecap: round; }
 .pb-more[hidden] { display: none; }
 .pb-close-text:hover, .pb-close-text:focus-visible { background: var(--pb-hi); color: #0F2D47; }
-.pb-close-text:focus-visible { outline: 2px solid #0F2D47; outline-offset: 2px; }
+.pb-close-text:focus-visible { outline: 2px solid var(--pb-focus); outline-offset: 2px; }   /* the light-ground ring (colour to choose) */
 
 /* phones, while the box is full screen: the other Play cards (the postcard's animated sky) are moved out of view
    behind it, so they pause and the box opens and draws smoothly (19 Nov). Nothing visible changes; the page
@@ -294,8 +298,46 @@ html.pb-locked .play-cards > :not(.pb-card) { transform: translateX(-300vw); }
    lid can hang over it for the moment before the full-screen view takes over */
 .pb-card { z-index: 1; }
 @media (max-width: 600px) {
-  .pb-card { min-height: calc(100svh - 56px); align-content: center; }
+  .pb-card { min-height: calc(100svh - 56px); grid-template-rows: auto 1fr; }   /* heading at the top, the box centred below it */
+  .pb-card > .pb-tin { align-self: center; }
 }
 /* each face of the lid drawn once into a single picture (artwork, blends and grain), so the flip moves one image */
 .pb-face > canvas.pb-baked { position: absolute; inset: 0; width: 100%; height: 100%; display: block; pointer-events: none; }
 .pb-face.pb-is-baked > .pb-lid-art, .pb-face.pb-is-baked > .pb-grain, .pb-face.pb-is-baked .pb-reverse { display: none; }
+
+/* laptops and up (19 Nov): the same spacing as the postcard card (postcard v41), so the two Play cards line up;
+   the band no longer has to fit one screen, and the tin keeps its size. The space below follows whatever is last
+   (the tin, or "× Close box" while open). Phones unchanged. */
+@media (min-width: 601px) {
+  .pb-card {
+    padding-top: clamp(56px, 5vw, 80px);
+    padding-bottom: clamp(88px, 8vw, 120px);
+    gap: clamp(28px, 2.5vw, 36px);
+  }
+}
+
+/* laptops (hover): the paper's confirmations ("Sound off", "Eraser", "Glitter pencil"…) are hidden, as the hover labels
+   and the icons already show them; notices ("Pick a pencil…", "Sorry…") still show. Screen readers hear them all. (19 Nov) */
+@media (hover: hover) and (pointer: fine) {
+  .pb-status:not(.pb-notice) { position: absolute; width: 1px; height: 1px; padding: 0; border: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+}
+
+/* "Try one out…" (19 Nov): italic capitals, a little larger and lighter, centred over the pencils */
+.pb .box-title { font: italic 700 13px/1 "Jost", system-ui, sans-serif; letter-spacing: .12em; color: #DCE6F2; }   /* bold italic (Fiona); Jost 700 italic is in the site's font link */
+.pb .desk .box-title { letter-spacing: .1em; }
+.pb .box-top { justify-content: center; text-align: center; }
+/* phones (full screen, upright): centred across the tray, the × kept at the right */
+.pb-full .box-top { display: grid; grid-template-columns: 36px 1fr 36px; align-items: center; }
+.pb-full .box-top > .box-title { grid-column: 2; }
+.pb-full .box-top > .pb-x { grid-column: 3; margin: -4px -2px -4px 0; }
+@media (min-width: 700px) {   /* phone on its side: the narrow tray keeps the title left, the × right */
+  .pb-full .desk .box-top { display: flex; text-align: left; }
+}
+/* the picked pencil's colours (19 Nov): the hover on the round tools, their labels, "Close box" and the hint all take a
+   pale version of the pencil in your hand; the Flowers pastel before a pencil is picked and with the eraser */
+.pb[data-pencil="glitter"] { --pb-hi: linear-gradient(135deg, color-mix(in srgb, #5B8BEF, #fff 68%), color-mix(in srgb, #FF83FE, #fff 68%) 60%, color-mix(in srgb, #FFC800, #fff 68%)); }
+.pb[data-pencil="bubbles"] { --pb-hi: linear-gradient(135deg, color-mix(in srgb, #A8C3F7, #fff 45%), color-mix(in srgb, #FFB5FE, #fff 45%) 40%, color-mix(in srgb, #ADCEC0, #fff 45%) 70%, color-mix(in srgb, #FFDE66, #fff 45%)); }
+.pb[data-pencil="stars"] { --pb-hi: linear-gradient(135deg, color-mix(in srgb, #F79AB8, #fff 55%), color-mix(in srgb, #FFA59A, #fff 55%) 55%, color-mix(in srgb, #FFC9A6, #fff 55%)); }
+.pb[data-pencil="flowers"] { --pb-hi: linear-gradient(135deg, color-mix(in srgb, #336FED, #fff 75%), color-mix(in srgb, #FD1BED, #fff 78%) 60%, color-mix(in srgb, #FFC800, #fff 65%)); }
+.pb[data-pencil="birds"] { --pb-hi: linear-gradient(135deg, color-mix(in srgb, #D3E9FE, #fff 20%), color-mix(in srgb, #A9D4FD, #fff 40%) 55%, color-mix(in srgb, #7DBAF6, #fff 55%)); }
+.pb .stage > .hint { color: #0F2D47; border-color: #0F2D4718; background: var(--pb-hi); }   /* the pencil's tint; with the eraser, the Flowers pastel */
