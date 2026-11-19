@@ -2292,7 +2292,9 @@ window.startPencilBox = (BW_IN, BH_IN) => {
       `<svg viewBox="0 0 40 170" aria-hidden="true"><g transform="translate(20 86) rotate(-135) translate(-54.5 -53.5)"><use href="#pencilArt" width="109" height="107" style="--body:${b.body}"/></g></svg>` +
       `<span class="name">${b.name}</span><span class="key">${i + 1}</span>`;
     btn.setAttribute("aria-label", `${b.name} pencil: ${b.note}`);
-    btn.addEventListener("click", () => { stopAuto(); if (erasing) setEraser(false, true); selectBrush(b.id); });
+    // the sound starts on picking the Bubbles or Birds pencil (a tap), not on the first touch of the paper: Safari can
+    // pause for a moment while it starts, which held up the start of the stroke (19 Nov)
+    btn.addEventListener("click", () => { stopAuto(); if (erasing) setEraser(false, true); selectBrush(b.id); if (b.id === "birds" || b.id === "bubbles") audio(); });
     slots.append(btn);
   });
 
@@ -2583,7 +2585,7 @@ window.startPencilBox = (BW_IN, BH_IN) => {
   const tin = $('pbTin'), box = $('pbBox'), inner = $('pbInner'), lid = $('pbLid'), card = $('pbCard');
   const openBtn = $('pbOpen'), front = $('pbFront'), inside = $('pbInside');
   const RATIO = 1240 / 540, reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
-  let state = 'closed', anims = [], started = false;
+  let state = 'closed', anims = [], started = false, grainTile = null;
 
   /* ---------- grain tile (as the postcard's) and the faint pencils on the band ---------- */
   (function textures() {
@@ -2594,6 +2596,7 @@ window.startPencilBox = (BW_IN, BH_IN) => {
     x.putImageData(img, 0, 0);
     const root = document.documentElement.style;
     root.setProperty('--pb-grain', `url(${c.toDataURL()})`);
+    grainTile = document.createElement('canvas'); grainTile.width = grainTile.height = T; grainTile.getContext('2d').drawImage(c, 0, 0);   // a full-strength copy, for baking the lid
     root.setProperty('--pb-grain-size', T / Math.min(2, devicePixelRatio || 1) + 'px');   // one grain = one screen pixel
     // the same grain, a third as strong: blended straight into the tin's blue and navy surfaces (≈ the lid's 0.3 overlay)
     const d2 = x.getImageData(0, 0, T, T);
@@ -2635,7 +2638,11 @@ window.startPencilBox = (BW_IN, BH_IN) => {
     if (anims.length) return;
     const hl = HL(), g = gap();
     tin.style.setProperty('--hl', hl + 'px');
-    if (state === 'open') {
+    if (state === 'open' && mode === 'full') {
+      // phones: the tin keeps its closed height; the open lid hangs below it, over what's below (the full-screen
+      // view covers it all), so opening and closing never re-measure the page (19 Nov)
+      box.style.height = hl + 'px'; tin.style.height = hl + 'px';
+    } else if (state === 'open') {
       const hb = boxH(hl);
       box.style.height = mode === 'full' ? hl + 'px' : 'auto';
       tin.style.setProperty('--hb', hb + 'px'); tin.style.setProperty('--d', (hb - hl) + 'px');
@@ -2726,8 +2733,9 @@ window.startPencilBox = (BW_IN, BH_IN) => {
         { transform: `translateY(${d}px) rotateX(-180deg)` },
       ], o),
       ...hinges.map(h => h.animate([{ transform: 'translateY(0px)', easing: ease.lift }, { transform: 'translateY(0px)', offset: .14, easing: ease.swing }, { transform: `translateY(${d}px)`, offset: .8 }, { transform: `translateY(${d}px)` }], o)),
-      tin.animate([{ height: hl + 'px' }, { height: hl + 'px', offset: .12, easing: ease.swing }, { height: hb + g + hl + 'px', offset: .82 }, { height: hb + g + hl + 'px' }], o),
-      box.animate([{ height: hl + 'px' }, { height: hl + 'px', offset: .12, easing: ease.swing }, { height: hb + 'px', offset: .82 }, { height: hb + 'px' }], o),
+      ...(mode === 'full' ? [] : [
+        tin.animate([{ height: hl + 'px' }, { height: hl + 'px', offset: .12, easing: ease.swing }, { height: hb + g + hl + 'px', offset: .82 }, { height: hb + g + hl + 'px' }], o),
+        box.animate([{ height: hl + 'px' }, { height: hl + 'px', offset: .12, easing: ease.swing }, { height: hb + 'px', offset: .82 }, { height: hb + 'px' }], o)]),
       $('pbShadeFront').animate([{ opacity: 0 }, { opacity: 0, offset: .14 }, { opacity: .45, offset: .47 }, { opacity: .45 }], o),
       $('pbShadeInside').animate([{ opacity: .45 }, { opacity: .45, offset: .47 }, { opacity: 0, offset: .8 }, { opacity: 0 }], o),
     ];
@@ -2773,8 +2781,9 @@ window.startPencilBox = (BW_IN, BH_IN) => {
         { transform: 'translateY(0px) rotateX(0deg)' },
       ], o),
       ...hinges.map(h => h.animate([{ transform: `translateY(${d}px)`, easing: ease.swing }, { transform: 'translateY(0px)', offset: .82 }, { transform: 'translateY(0px)' }], o)),
-      tin.animate([{ height: hb + g + hl + 'px', easing: ease.swing }, { height: hl + 'px', offset: .82 }, { height: hl + 'px' }], o),
-      box.animate([{ height: hb + 'px', easing: ease.swing }, { height: hl + 'px', offset: .82 }, { height: hl + 'px' }], o),
+      ...(mode === 'full' ? [] : [
+        tin.animate([{ height: hb + g + hl + 'px', easing: ease.swing }, { height: hl + 'px', offset: .82 }, { height: hl + 'px' }], o),
+        box.animate([{ height: hb + 'px', easing: ease.swing }, { height: hl + 'px', offset: .82 }, { height: hl + 'px' }], o)]),
       $('pbShadeInside').animate([{ opacity: 0 }, { opacity: .45, offset: .42 }, { opacity: .45 }], o),
       $('pbShadeFront').animate([{ opacity: .45 }, { opacity: .45, offset: .42 }, { opacity: 0, offset: .82 }, { opacity: 0 }], o),
     ];
@@ -2800,7 +2809,9 @@ window.startPencilBox = (BW_IN, BH_IN) => {
       // the paper's drawing waits until the view has grown, so the growing isn't held up (19 Nov)
       api && api.hold(true);
       fullEl.animate([{ clipPath: boxClip() }, { clipPath: 'inset(0px round 0px)' }], o).onfinish = () => api && api.hold(false);
-      inner.animate([{ opacity: 0 }, { opacity: 0, offset: .35 }, { opacity: 1 }], o);
+      // the tray and paper stay hidden while the outline grows (cheap to redraw), then fade in on their own (19 Nov)
+      inner.style.visibility = 'hidden';
+      setTimeout(() => { inner.style.visibility = ''; inner.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 160, easing: 'ease-out' }); }, o.duration);
     }
     afterOpen();
   }
@@ -2819,8 +2830,11 @@ window.startPencilBox = (BW_IN, BH_IN) => {
     if (reduced) { done(); return; }
     const o = { duration: 340, easing: 'cubic-bezier(.4,0,.2,1)' };   // 19 Nov: 440 → 340
     api && api.hold(true);
-    inner.animate([{ opacity: 1 }, { opacity: 0, offset: .5 }, { opacity: 0 }], o);
-    fullEl.animate([{ clipPath: 'inset(0px round 0px)' }, { clipPath: boxClip() }], o).onfinish = done;
+    // the tray and paper fade out first, then the empty outline shrinks back into the box (19 Nov)
+    inner.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 120, fill: 'forwards' }).onfinish = () => {
+      inner.style.visibility = 'hidden';
+      fullEl.animate([{ clipPath: 'inset(0px round 0px)' }, { clipPath: boxClip() }], o).onfinish = () => { inner.style.visibility = ''; inner.getAnimations().forEach(a => a.cancel()); done(); };
+    };
   }
   // the × and Esc go "back", so the phone's own back gesture does exactly the same
   function leaveFull() {
@@ -2953,40 +2967,75 @@ window.startPencilBox = (BW_IN, BH_IN) => {
      first and the detail arrived over it). Both now happen while the page is idle, before anyone opens the tin. */
   const whenIdle = window.requestIdleCallback ? f => requestIdleCallback(f, { timeout: 2000 }) : f => setTimeout(f, 200);
 
-  // 1. the relief, drawn once into a picture (redrawn if the lid changes size); the live SVG stays as a fallback
-  const reliefSvg = inside.querySelector('.pb-reverse');
-  let reliefCanvas = null, reliefW = 0, reliefBusy = false;
-  function bakeRelief() {
-    const note = reliefSvg && reliefSvg.parentNode;
-    if (!note || reliefBusy) return;
-    const w = note.offsetWidth, h = note.offsetHeight, dpr = Math.min(2, devicePixelRatio || 1);
-    const W = Math.round(w * dpr), H = Math.round(h * dpr);
-    if (!w || !h || Math.abs(W - reliefW) < 2) return;
-    reliefBusy = true;
-    const defs = [...document.querySelectorAll('filter[id^="pbS-"]')].map(f => f.outerHTML).join('');
-    const style = '.pb-s-plate{filter:url(#pbS-plate)}.pb-s-letters{filter:url(#pbS-letters)}.pb-s-dots{filter:url(#pbS-dots)}.pb-s-vine{filter:url(#pbS-vine)}.pb-join{display:none}';
-    const markup = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="${reliefSvg.getAttribute('viewBox')}" fill="none"><style>${style}</style><defs>${defs}</defs>${reliefSvg.innerHTML}</svg>`;
+  // 1. both faces of the lid drawn once into a picture each, redrawn if the lid changes size (19 Nov: Safari redrew the
+  //    front's 27 blended layers and grain on every frame of the flip). The live artwork stays as the fallback.
+  const svgImage = (svg, W, H, extra = '') => new Promise((res, rej) => {
+    const markup = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="${svg.getAttribute('viewBox')}" fill="none">${extra}${svg.innerHTML}</svg>`;
     const img = new Image(), url = URL.createObjectURL(new Blob([markup], { type: 'image/svg+xml' }));
-    const done = ok => { URL.revokeObjectURL(url); reliefBusy = false; if (!ok && reliefCanvas) { reliefCanvas.remove(); reliefCanvas = null; reliefSvg.style.display = ''; } };
-    img.onload = () => {
-      try {
-        const c = reliefCanvas || document.createElement('canvas');
-        c.width = W; c.height = H; c.className = 'pb-reverse'; c.setAttribute('aria-hidden', 'true');
-        c.getContext('2d').drawImage(img, 0, 0, W, H);
-        if (!reliefCanvas) { reliefSvg.after(c); reliefCanvas = c; }
-        reliefSvg.style.display = 'none'; reliefW = W; done(true);
-      } catch (e) { done(false); }
-    };
-    img.onerror = () => done(false);
+    img.onload = () => { URL.revokeObjectURL(url); res(img); };
+    img.onerror = () => { URL.revokeObjectURL(url); rej(); };
     img.src = url;
+  });
+  function grainOver(x, W, H, s, alpha) {   // the CSS grain overlay: soft-light at this strength, one grain = one screen pixel
+    if (!grainTile) return;
+    const p = x.createPattern(grainTile, 'repeat'), k = s / Math.min(2, devicePixelRatio || 1);
+    if (p.setTransform) p.setTransform(new DOMMatrix().scale(k));
+    x.save(); x.globalCompositeOperation = 'soft-light'; x.globalAlpha = alpha; x.fillStyle = p; x.fillRect(0, 0, W, H); x.restore();
   }
-  let reliefTimer = 0;
-  new ResizeObserver(() => { clearTimeout(reliefTimer); reliefTimer = setTimeout(() => whenIdle(bakeRelief), 300); }).observe(inside);
+  function faceCanvas(face) {
+    let c = face.querySelector(':scope > canvas.pb-baked');
+    if (!c) { c = document.createElement('canvas'); c.className = 'pb-baked'; c.setAttribute('aria-hidden', 'true'); face.querySelector(':scope > .pb-grain').before(c); }   // above the artwork and panel, under the button and shade
+    return c;
+  }
+  let bakedW = 0, baking = false;
+  async function bakeFaces() {
+    const w = front.offsetWidth, h = front.offsetHeight;
+    const s = Math.min(3, devicePixelRatio || 1), W = Math.round(w * s), H = Math.round(h * s);
+    if (baking || !w || !h || Math.abs(W - bakedW) < 2) return;
+    baking = true;
+    try {
+      // front: the lid artwork, the grain over it (0.3), cut back to the artwork's own shape
+      const art = front.querySelector('.pb-lid-art');
+      const img = await svgImage(art, W, H);
+      const cf = faceCanvas(front); cf.width = W; cf.height = H;
+      const xf = cf.getContext('2d');
+      xf.drawImage(img, 0, 0, W, H); grainOver(xf, W, H, s, .3);
+      xf.globalCompositeOperation = 'destination-in'; xf.drawImage(img, 0, 0, W, H); xf.globalCompositeOperation = 'source-over';
+      front.classList.add('pb-is-baked');
+      // inside: the panel blue, the pressed-in relief where it sits, the grain over it (0.18)
+      if (reliefSvg) {
+        const defs = [...document.querySelectorAll('filter[id^="pbS-"]')].map(f => f.outerHTML).join('');
+        const style = '<style>.pb-s-plate{filter:url(#pbS-plate)}.pb-s-letters{filter:url(#pbS-letters)}.pb-s-dots{filter:url(#pbS-dots)}.pb-s-vine{filter:url(#pbS-vine)}.pb-join{display:none}</style>';
+        // the face's layers as on the page: blue rim, navy band (::before), blue panel (.pb-note) with the relief in it
+        const note = reliefSvg.parentNode, nx = note.offsetLeft, ny = note.offsetTop, nw = note.offsetWidth, nh = note.offsetHeight;
+        const rimg = await svgImage(reliefSvg, Math.round(nw * s), Math.round(nh * s), style + '<defs>' + defs + '</defs>');
+        const ci = faceCanvas(inside); ci.width = W; ci.height = H;
+        const xi = ci.getContext('2d'); xi.scale(s, s);
+        const cs = getComputedStyle(inside), band = getComputedStyle(inside, '::before'), ns = getComputedStyle(note);
+        const rr = (x0, y0, w0, h0, r) => { xi.beginPath(); xi.roundRect(x0, y0, w0, h0, r); xi.fill(); };
+        xi.fillStyle = cs.backgroundColor; xi.fillRect(0, 0, w, h);
+        const bi = parseFloat(band.top) || 0;
+        xi.fillStyle = band.backgroundColor; rr(bi, bi, w - 2 * bi, h - 2 * bi, parseFloat(band.borderTopLeftRadius) || 0);
+        xi.fillStyle = ns.backgroundColor; rr(nx, ny, nw, nh, parseFloat(ns.borderTopLeftRadius) || 0);
+        xi.drawImage(rimg, nx, ny, nw, nh);
+        xi.setTransform(1, 0, 0, 1, 0, 0);
+        grainOver(xi, W, H, s, .18);
+        inside.classList.add('pb-is-baked');
+      }
+      bakedW = W;
+    } catch (err) {
+      front.classList.remove('pb-is-baked'); inside.classList.remove('pb-is-baked');   // keep the live artwork
+    }
+    baking = false;
+  }
+  const reliefSvg = inside.querySelector('.pb-reverse');
+  let bakeTimer = 0;
+  new ResizeObserver(() => { clearTimeout(bakeTimer); bakeTimer = setTimeout(() => whenIdle(bakeFaces), 300); }).observe(front);
 
   // 2. the engine, started behind the closed lid once the card is about a screen away, then paused (phones too,
   //    19 Nov: started in place at the lid's size; the blank paper takes the full-screen shape when it opens)
   function warmUp() {
-    if (reliefSvg) bakeRelief();
+    bakeFaces();
     if (started || state !== 'closed') return;
     setMode('inline');
     inner.hidden = false; ensureEngine(); layout();

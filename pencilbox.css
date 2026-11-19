@@ -27,7 +27,7 @@
   padding: clamp(24px, 3.5vw, 40px) var(--pb-side) clamp(28px, 3.5vw, 44px);
   background: linear-gradient(240deg, #FFCB45 0%, #FBA9A6 48%, #F98AF2 100%);
   font-family: "Jost", system-ui, sans-serif;
-  overflow: clip;
+  overflow-x: clip;
 }
 /* faint pencils scattered across the band, then the postcard's still grain over the colour */
 .pb-card::before, .pb-card::after { content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none; }
@@ -288,3 +288,14 @@ html.pb-locked, html.pb-locked body { overflow: hidden; overscroll-behavior: non
    behind it, so they pause and the box opens and draws smoothly (19 Nov). Nothing visible changes; the page
    behind is covered and locked. */
 html.pb-locked .play-cards > :not(.pb-card) { transform: translateX(-300vw); }
+
+/* phones (19 Nov): the band is at least a screen tall, like the postcard's, with the closed box centred, so the
+   postcard's animated sky is off screen when the box is tapped; and the card sits above the next one, so the open
+   lid can hang over it for the moment before the full-screen view takes over */
+.pb-card { z-index: 1; }
+@media (max-width: 600px) {
+  .pb-card { min-height: calc(100svh - 56px); align-content: center; }
+}
+/* each face of the lid drawn once into a single picture (artwork, blends and grain), so the flip moves one image */
+.pb-face > canvas.pb-baked { position: absolute; inset: 0; width: 100%; height: 100%; display: block; pointer-events: none; }
+.pb-face.pb-is-baked > .pb-lid-art, .pb-face.pb-is-baked > .pb-grain, .pb-face.pb-is-baked .pb-reverse { display: none; }
