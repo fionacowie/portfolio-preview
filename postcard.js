@@ -30,7 +30,7 @@
     replay:  { inView: .5 },
     // looking through a window: as the page scrolls, the sky (stars, Milky Way, Moon) drifts a little against the
     // skyline, so it feels further away. amount = the most it moves either way, in px (0 = off; 20 Nov, to try)
-    parallax: { amount: 50 },   // Fiona, 20 Nov (the max)
+    parallax: { amount: 50, phone: 20 },   // Fiona, 20 Nov: 50px (the max); phones 20px (50 felt big and jerky on her iPhone)
     // A glitter postcard, after Fiona's Glitter pencil (soft round glints, never diamonds):
     //  glitter: fine flecks in her pencil colours printed into the skyline (fainter in the sky), and flecks
     //           all over the postcard catching the light now and then with a soft round twinkle
@@ -1064,18 +1064,32 @@
     let fontsDone = false, greeted = false, wentAway = false, canReplay = null;
     // parallax: the sky layers drift against the frame and skyline while the card scrolls past
     const skyLayers = [q('.pc-stars'), q('.pc-band'), q('.pc-glow'), q('#pc-moon')].filter(Boolean);
-    let pxRaf = 0;
+    let pxRaf = 0, pxNow = 0, pxGoal = 0;
+    skyLayers.forEach(e => { if (e !== moonEl) e.style.willChange = 'transform'; });   // own layers: moved, never redrawn
+    function parallaxGoal(){
+      const phone = innerWidth <= 600 || matchMedia('(pointer: coarse)').matches;
+      const A = reduce ? 0 : ((phone ? SKY.parallax.phone : SKY.parallax.amount) || 0), r = root.getBoundingClientRect();
+      if (!A || !r.height) return 0;
+      const t = Math.max(-1, Math.min(1, ((r.top + r.height / 2) - innerHeight / 2) / (innerHeight * .6)));
+      return -t * A;
+    }
+    function applyParallax(y){
+      const r = root.getBoundingClientRect(), A = Math.max(SKY.parallax.amount || 0, SKY.parallax.phone || 0);
+      const sc = (1 + 2.2 * A / Math.max(1, r.height)).toFixed(4);
+      for (const e of skyLayers){
+        if (e === moonEl) e.style.translate = `0 ${(y / V.k).toFixed(2)}px`;   // adds to its placement transform
+        else if (e === cv) e.style.transform = `translate3d(0, ${y.toFixed(2)}px, 0)`;   // stars: never scaled
+        else e.style.transform = `translate3d(0, ${y.toFixed(2)}px, 0) scale(${sc})`;
+      }
+    }
+    // eases towards the scroll position (about a fifth of the way each frame), so it glides rather than jumps
     function parallax(){
       pxRaf = 0;
-      const A = reduce ? 0 : (SKY.parallax.amount || 0), r = root.getBoundingClientRect();
-      if (!A || !r.height){ skyLayers.forEach(e => { e.style.transform = ''; e.style.translate = ''; }); return; }
-      const t = Math.max(-1, Math.min(1, ((r.top + r.height / 2) - innerHeight / 2) / (innerHeight * .6)));
-      const y = (-t * A).toFixed(2), s = (1 + 2.2 * A / r.height).toFixed(4);
-      for (const e of skyLayers){
-        if (e.id === 'pc-moon') e.style.translate = `0 ${(-t * A / V.k).toFixed(2)}px`;   // adds to its placement transform
-        else if (e === cv) e.style.transform = `translateY(${y}px)`;   // stars: never scaled, so they keep their size and number
-        else e.style.transform = `translateY(${y}px) scale(${s})`;     // the soft glow and Milky Way can be scaled unnoticed
-      }
+      pxGoal = parallaxGoal();
+      pxNow += (pxGoal - pxNow) * .22;
+      if (Math.abs(pxGoal - pxNow) < .05) pxNow = pxGoal;
+      applyParallax(pxNow);
+      if (pxNow !== pxGoal && visible) pxRaf = requestAnimationFrame(parallax);
     }
     const onScroll = () => { if (visible && !pxRaf) pxRaf = requestAnimationFrame(parallax); };
     addEventListener('scroll', onScroll, { passive: true }); addEventListener('resize', onScroll);
