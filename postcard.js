@@ -28,6 +28,9 @@
     // the star writes the message again every time the postcard comes back into view after being completely out of
     // view, once at least half of it is showing. Never while someone is typing or sharing, never with reduced motion.
     replay:  { inView: .5 },
+    // looking through a window: as the page scrolls, the sky (stars, Milky Way, Moon) drifts a little against the
+    // skyline, so it feels further away. amount = the most it moves either way, in px (0 = off; 20 Nov, to try)
+    parallax: { amount: 50 },   // Fiona, 20 Nov (the max)
     // A glitter postcard, after Fiona's Glitter pencil (soft round glints, never diamonds):
     //  glitter: fine flecks in her pencil colours printed into the skyline (fainter in the sky), and flecks
     //           all over the postcard catching the light now and then with a soft round twinkle
@@ -63,6 +66,7 @@
     corners: 'sharp',   // 'round' | 'sharp' (field, SHARE, pills; Fiona, 19 Nov) | 'square' (also sky and send buttons)
     labelWeight: 700,   // SHARE and the share window's buttons: 400 regular, 500 medium, 700 bold (Fiona, 19 Nov); icons follow
     glassGrain: .35,   // Fiona, 12 Nov; grain showing through the glass field and SHARE (0 = smooth glass, 1 = about the postcard's own)
+    windowShade: 1,   // a soft shadow inside the frame, as if the sky sits behind a window (0 = off; Fiona, 20 Nov)
     styles: {
       // Fiona's choice (6 Nov): pale, sky-tinted top-left into a bright blue, following the postcard's colours
       sky:      { name: 'Sky',       base: ['#F5FDFF', '#4D82FF'], skies: [['#CFEDEB', '#6AA8F7'], ['#F0DBFC', '#809BFF'], ['#F0D6DD', '#8298F0']] },
@@ -231,6 +235,7 @@
     card.style.setProperty('--pc-grain', CARD.grain);
     card.style.setProperty('--pc-grain-size', CARD.grainSize + 'px');
     card.style.setProperty('--pc-glass-grain', CARD.glassGrain);
+    card.style.setProperty('--pc-window', CARD.windowShade);
     for (const e of [card, sheet]){ e.style.setProperty('--pc-label-weight', CARD.labelWeight); e.style.setProperty('--pc-icon-stroke', ({ 400: 1.7, 500: 2, 700: 2.5 })[CARD.labelWeight] || 2); }
     for (const e of [card, sheet]){ e.classList.toggle('pc-sharp', CARD.corners !== 'round'); e.classList.toggle('pc-square', CARD.corners === 'square'); }
     card.classList.toggle('pc-framed', CARD.frame);
@@ -239,6 +244,7 @@
     card.style.setProperty('--pc-sky-hi', `linear-gradient(135deg, ${p.glow}, ${p.bottom})`);
     sheet.style.setProperty('--pc-sky-hi', `linear-gradient(135deg, ${p.glow}, ${p.bottom})`);   // the share window's buttons too
     card.style.setProperty('--pc-sky-a', p.glow); card.style.setProperty('--pc-sky-b', p.bottom);   // tints the glass controls
+    card.style.setProperty('--pc-shade', rgb(mix(hex(p.top), [0, 0, 0], .55)));   // the window shadow: a deep version of the sky's top colour
   }
   (() => {
     const T = 256, c = document.createElement('canvas'); c.width = c.height = T;
@@ -266,7 +272,7 @@
   const idle = window.requestIdleCallback ? fn => requestIdleCallback(fn, { timeout: 300 }) : fn => setTimeout(fn, 0);
   function wake(){ if (P) return; P = engine(el.postcard); controls(P); }
   // for trying settings from the console or a playground page (nothing on the site uses it)
-  mount.postcard = { CARD, SKY, CREDIT, applyCard: () => applyCard(skyIndex), applyCredit, letters: px => P && P.letters(px), glitter: () => P && P.glitter() };
+  mount.postcard = { parallax: () => dispatchEvent(new Event('scroll')), CARD, SKY, CREDIT, applyCard: () => applyCard(skyIndex), applyCredit, letters: px => P && P.letters(px), glitter: () => P && P.glitter() };
   if ('IntersectionObserver' in window){
     const io = new IntersectionObserver(es => { if (es.some(e => e.isIntersecting)){ io.disconnect(); idle(wake); } }, { rootMargin: '100% 0px' });
     io.observe(mount);
@@ -284,6 +290,7 @@
     const glowCv = q('.pc-glow'), bandCv = q('.pc-band'), grainEl = q('.pc-grain');
     const layer = { base: q('.pc-base'), lift: q('.pc-lift'), pale: q('.pc-pale'), dark: q('.pc-dark') };
     const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const OVER = reduce ? 0 : 52;   // px of extra star canvas above and below (covers parallax up to 50px)
     const DPR_CAP = 2;
     let skyline = new Path2D(SKYLINE), skyTop = 377, skyS = 1, skyCx = 0;
     // the skyline enlarged by s around (cx, 982): rewrites the path (all absolute M L C H V Z), so every use follows
@@ -586,17 +593,20 @@
       groundU = (strip - drop) / V.k;
       if (groundU > 0) V = { ...V, h: V.h + groundU };               // extra ground below for the controls
       if (!sidesMade && (V.x < -2 || V.x + V.w > W + 2)) makeSides();
-      cv.width = fly.width = flyOff.width = twCv.width = Math.round(b.width * dpr); cv.height = fly.height = flyOff.height = twCv.height = Math.round(b.height * dpr); flyBoxes = [];
+      cv.width = fly.width = flyOff.width = twCv.width = Math.round(b.width * dpr); fly.height = flyOff.height = twCv.height = Math.round(b.height * dpr); flyBoxes = [];
+      // the stars' canvas is taller than the postcard by OVER px top and bottom, so parallax can slide it without scaling
+      cv.height = Math.round((b.height + 2 * OVER) * dpr); cv.style.top = -OVER + 'px'; cv.style.height = `calc(100% + ${2 * OVER}px)`;
       scale = cv.width / V.w;
       art.setAttribute('viewBox', `${V.x.toFixed(2)} ${V.y.toFixed(2)} ${V.w.toFixed(2)} ${V.h.toFixed(2)}`);
       paintSky();
       const clip = Math.max(0, (V.y + V.h - lowestRoof(V.x, V.x + V.w) - 4) * V.k);
       root.style.setProperty('--pc-clip', clip.toFixed(1) + 'px');
+      cv.style.clipPath = `inset(0 0 ${(clip + OVER).toFixed(1)}px 0)`;
       const fg = q('#pc-dark-fade-grad'); fg.setAttribute('y1', (V.y + V.h - 240).toFixed(1)); fg.setAttribute('y2', (V.y + V.h).toFixed(1));
       const changed = fitCircle();
       placeMoon();
-      const m = 12;
-      shown = stars.filter(s => s.x > V.x - m && s.x < V.x + V.w + m && s.y > V.y - m && s.y < V.y + V.h + m && !nearWords(s.x, s.y)
+      const m = 12, mv = 12 + OVER / V.k;
+      shown = stars.filter(s => s.x > V.x - m && s.x < V.x + V.w + m && s.y > V.y - mv && s.y < V.y + V.h + mv && !nearWords(s.x, s.y)
         && Math.hypot(s.x - moonAt[0], s.y - moonAt[1]) > 20);                 // nothing peeking out from behind the Moon
       makeFlecks();
       drawStars(performance.now());
@@ -607,7 +617,7 @@
     function drawStars(now){
       ctx.setTransform(1, 0, 0, 1, 0, 0);
       ctx.clearRect(0, 0, cv.width, cv.height);
-      ctx.setTransform(scale, 0, 0, scale, -V.x * scale, -V.y * scale);
+      ctx.setTransform(scale, 0, 0, scale, -V.x * scale, -V.y * scale + OVER * dpr);
       let fill = '#fff'; ctx.fillStyle = fill;
       const t = now / 1000, tinted = SKY.tints.on, lowN = SKY.lowStars.on ? SKY.lowStars.count : 0;
       for (const s of shown){
@@ -1052,7 +1062,24 @@
 
     /* ---------- start; pause when hidden or scrolled away ---------- */
     let fontsDone = false, greeted = false, wentAway = false, canReplay = null;
-    const setVisible = v => { visible = v; v ? (startLoop(), !busy && schedule()) : (stopLoop(), clearTimeout(randTimer)); whenSeen(); };
+    // parallax: the sky layers drift against the frame and skyline while the card scrolls past
+    const skyLayers = [q('.pc-stars'), q('.pc-band'), q('.pc-glow'), q('#pc-moon')].filter(Boolean);
+    let pxRaf = 0;
+    function parallax(){
+      pxRaf = 0;
+      const A = reduce ? 0 : (SKY.parallax.amount || 0), r = root.getBoundingClientRect();
+      if (!A || !r.height){ skyLayers.forEach(e => { e.style.transform = ''; e.style.translate = ''; }); return; }
+      const t = Math.max(-1, Math.min(1, ((r.top + r.height / 2) - innerHeight / 2) / (innerHeight * .6)));
+      const y = (-t * A).toFixed(2), s = (1 + 2.2 * A / r.height).toFixed(4);
+      for (const e of skyLayers){
+        if (e.id === 'pc-moon') e.style.translate = `0 ${(-t * A / V.k).toFixed(2)}px`;   // adds to its placement transform
+        else if (e === cv) e.style.transform = `translateY(${y}px)`;   // stars: never scaled, so they keep their size and number
+        else e.style.transform = `translateY(${y}px) scale(${s})`;     // the soft glow and Milky Way can be scaled unnoticed
+      }
+    }
+    const onScroll = () => { if (visible && !pxRaf) pxRaf = requestAnimationFrame(parallax); };
+    addEventListener('scroll', onScroll, { passive: true }); addEventListener('resize', onScroll);
+    const setVisible = v => { visible = v; v ? (startLoop(), !busy && schedule(), onScroll()) : (stopLoop(), clearTimeout(randTimer)); whenSeen(); };
     new ResizeObserver(() => size()).observe(root);
     new IntersectionObserver(([e]) => setVisible(e.isIntersecting && !document.hidden)).observe(root);
     // replay on return (see SKY.replay)
@@ -1093,7 +1120,7 @@
     const moonPath = new Path2D(MOON);
     let grainTile = null;
     function compose(c, out){
-      const k = scale, W2 = cv.width, H2 = cv.height, py = y => (y - V.y) * k, ox = -V.x * k, oy = -V.y * k;
+      const k = scale, W2 = cv.width, H2 = fly.height, py = y => (y - V.y) * k, ox = -V.x * k, oy = -V.y * k;
       c.save(); c.setTransform(out, 0, 0, out, 0, 0); c.globalAlpha = 1; c.globalCompositeOperation = 'source-over';
       let g = c.createLinearGradient(0, py(PAL.y1), 0, py(PAL.y2)); g.addColorStop(0, rgb(PAL.b1)); g.addColorStop(1, rgb(PAL.b2));
       c.fillStyle = g; c.fillRect(0, 0, W2, H2);
@@ -1114,7 +1141,7 @@
         c.fillStyle = r; c.fillRect(-1e5, -1e5, 2e5, 2e5); c.restore();
       };
       c.globalCompositeOperation = 'multiply'; darkFill(); c.globalCompositeOperation = 'source-over';
-      c.drawImage(cv, 0, 0);
+      c.drawImage(cv, 0, Math.round(OVER * dpr), W2, H2, 0, 0, W2, H2);   // the postcard's part of the taller stars canvas
       c.save(); c.setTransform(out * k, 0, 0, out * k, out * ox, out * oy);
       const mt = (moonEl.getAttribute('transform') || '').match(/-?[\d.]+/g); if (mt) c.translate(+mt[0], +mt[1]);
       c.shadowColor = 'rgba(255,255,255,.6)'; c.shadowBlur = 8 * k * out; c.fillStyle = '#fff'; c.fill(moonPath); c.restore();

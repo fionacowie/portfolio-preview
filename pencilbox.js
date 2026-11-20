@@ -2587,6 +2587,9 @@ window.startPencilBox = (BW_IN, BH_IN) => {
 (() => {
   const $ = id => document.getElementById(id);
   const tin = $('pbTin'), box = $('pbBox'), inner = $('pbInner'), lid = $('pbLid'), card = $('pbCard');
+  const band = document.createElement('div'); band.className = 'pb-band'; band.setAttribute('aria-hidden', 'true'); card.prepend(band);
+  // phones: how far the open lid hangs below the band (the band grows by this much as it swings down)
+  const bandExt = () => Math.max(0, Math.ceil(tin.getBoundingClientRect().bottom + gap() + HL() + 24 - card.getBoundingClientRect().bottom));
   const openBtn = $('pbOpen'), front = $('pbFront'), inside = $('pbInside');
   const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
   // the lid's shape: Fiona's portrait lid on phones held upright (20 Nov), the landscape lid everywhere else
@@ -2618,7 +2621,8 @@ window.startPencilBox = (BW_IN, BH_IN) => {
     const spots = [[40, 60, 20], [250, 30, 110], [380, 190, 60], [120, 260, 160], [300, 360, 15], [30, 400, 95], [200, 150, 230]];
     const g = spots.map(([px, py, a]) => `<path d="${d}" transform="translate(${px} ${py}) rotate(${a + 45}) scale(.62) translate(-70 -23)"/>`).join('');
     const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="460" height="460" viewBox="0 0 460 460"><g fill="#B3415A" fill-opacity=".09">${g}</g></svg>`;
-    card.style.setProperty('--pb-pattern', `url("data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}")`);
+    // 20 Nov: the scattered-pencil pattern is off (cleaner, matches the postcard's gradient and grain); remove the // below to bring it back
+    if (false) card.style.setProperty('--pb-pattern', `url("data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}")`);
   })();
 
   /* ---------- two ways to open: in place (desktop) or full screen (phones, decided at the first open) ---------- */
@@ -2660,13 +2664,25 @@ window.startPencilBox = (BW_IN, BH_IN) => {
       tin.style.height = hb + g + hl + 'px';
     } else { box.style.height = hl + 'px'; tin.style.height = hl + 'px'; }
   }
+  // in place, the paper's height: the box at the lid's height, or the pencil tray's own height if that's taller (20 Nov:
+  // on narrower screens, about 700–960px wide (iPads upright, small laptop windows), the lid is shorter than the five
+  // stacked pencils, and the paper used to keep the lid's height, leaving empty navy under it)
+  function paperH() {
+    const lidH = HL() - 2 * px(box, 'paddingTop') - px(inner, 'paddingTop') - px(inner, 'paddingBottom');
+    const tray = $('desk').querySelector('.box'), slots = $('slots'), empty = !slots.children.length;
+    if (!tray || getComputedStyle(tray).order !== '-1') return lidH;          // only with the tray down the side
+    if (empty) slots.innerHTML = '<button class="slot" tabindex="-1" aria-hidden="true"><svg viewBox="0 0 40 170"></svg><span class="name">Flowers</span></button>'.repeat(5);
+    tray.style.alignSelf = 'start'; const trayH = tray.offsetHeight; tray.style.alignSelf = '';
+    if (empty) slots.innerHTML = '';
+    return Math.max(lidH, trayH);
+  }
   function fitPaper() {                               // blank: reshape; drawn on: keep the shape, as big as fits
     if (!board) return;
     reshapeIfBlank();
     const ar = board.w / board.h, w = area.clientWidth;
     if (mode === 'full') { paper.style.width = Math.min(w, area.clientHeight * ar) + 'px'; return; }
-    // in place: no taller than the box at the lid's height (matters only if it first opened full screen)
-    const th = HL() - 2 * px(box, 'paddingTop') - px(inner, 'paddingTop') - px(inner, 'paddingBottom');
+    // in place: no taller than the box (matters only if it first opened full screen)
+    const th = paperH();
     paper.style.width = th * ar < w - 1 ? th * ar + 'px' : '';
   }
   new ResizeObserver(layout).observe(tin);
@@ -2685,8 +2701,7 @@ window.startPencilBox = (BW_IN, BH_IN) => {
       if (empty) slots.innerHTML = '';
       return b;
     }
-    const th = HL() - 2 * px(box, 'paddingTop') - px(inner, 'paddingTop') - px(inner, 'paddingBottom');
-    return { w: 1728, h: Math.round(1728 * th / area.clientWidth) };
+    return { w: 1728, h: Math.round(1728 * paperH() / area.clientWidth) };
   }
   function applyBoard(b) {
     const st = $('stage');
@@ -2719,6 +2734,8 @@ window.startPencilBox = (BW_IN, BH_IN) => {
   const stopAnims = () => { anims.forEach(a => a.cancel()); anims = []; };
   function setOpen(open) {
     state = open ? 'open' : 'closed'; tin.dataset.state = state;
+    // phones: the band stays grown while the box is open; back to the card's size once closed
+    if (open && mode === 'full') card.dataset.ext = 'on'; else { delete card.dataset.ext; if (!open) card.style.removeProperty('--pb-ext'); }
     inside.inert = !open; front.inert = open; openBtn.setAttribute('aria-expanded', open);
     if (!open && mode !== 'full') inner.hidden = true;
     $('pbMore').hidden = !(open && mode !== 'full');
@@ -2751,6 +2768,9 @@ window.startPencilBox = (BW_IN, BH_IN) => {
       $('pbShadeInside').animate([{ opacity: .45 }, { opacity: .45, offset: .47 }, { opacity: 0, offset: .8 }, { opacity: 0 }], o),
     ];
     if (mode === 'full') {
+      // phones: the band grows down with the lid, as the card does on laptops (a clip on its own layer, nothing re-measured)
+      const ext = bandExt(); card.style.setProperty('--pb-ext', ext + 'px');
+      anims.push(band.animate([{ clipPath: `inset(0 0 ${ext}px 0)` }, { clipPath: `inset(0 0 ${ext}px 0)`, offset: .12, easing: ease.swing }, { clipPath: 'inset(0 0 0px 0)', offset: .8 }, { clipPath: 'inset(0 0 0px 0)' }], o));
       // phones: once the lid is down, the box grows to fill the screen
       setTimeout(() => { if (state === 'opening') enterFull(); }, dur * .8);
     } else {
@@ -2794,7 +2814,10 @@ window.startPencilBox = (BW_IN, BH_IN) => {
     state = 'closing'; tin.dataset.state = 'closing'; inside.inert = true; $('pbMore').hidden = true;
     const dur = mode === 'full' ? 620 : 1050, o = { duration: dur, fill: 'forwards' };   // phones 19 Nov: 800 → 620
     lid.style.transition = 'none';
+    const ext = parseFloat(card.style.getPropertyValue('--pb-ext')) || 0;
+    const bandAnim = mode === 'full' && ext ? [band.animate([{ clipPath: 'inset(0 0 0px 0)', easing: ease.swing }, { clipPath: `inset(0 0 ${ext}px 0)`, offset: .82 }, { clipPath: `inset(0 0 ${ext}px 0)` }], o)] : [];
     anims = [
+      ...bandAnim,
       lid.animate([
         { transform: `translateY(${d}px) rotateX(-180deg)`, easing: ease.swing },
         { transform: 'translateY(0px) rotateX(3deg)', offset: .82, easing: ease.settle },

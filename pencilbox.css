@@ -25,14 +25,18 @@
   display: grid; justify-items: center; gap: clamp(20px, 3vw, 32px);
   width: 100vw; margin-left: calc(50% - 50vw);
   padding: clamp(24px, 3.5vw, 40px) var(--pb-side) clamp(28px, 3.5vw, 44px);
-  background: linear-gradient(240deg, #FFCB45 0%, #FBA9A6 48%, #F98AF2 100%);
   font-family: "Jost", system-ui, sans-serif;
   overflow-x: clip;
 }
+/* the band's colour is its own layer (20 Nov), so on phones it can grow down with the opening lid, as the card grows on
+   laptops: it reaches --pb-ext below the card and is clipped back to the card until the lid swings down */
+.pb-band { position: absolute; left: 0; right: 0; top: 0; bottom: calc(-1 * var(--pb-ext, 0px)); z-index: -1; pointer-events: none;
+  background: linear-gradient(240deg, #FFCB45 0%, #FBA9A6 48%, #F98AF2 100%); clip-path: inset(0 0 var(--pb-ext, 0px) 0); }
 /* faint pencils scattered across the band, then the postcard's still grain over the colour */
-.pb-card::before, .pb-card::after { content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none; }
-.pb-card::before { background-image: var(--pb-pattern, none); background-size: 460px; opacity: .55; }
-.pb-card::after { background-image: var(--pb-grain, none); background-size: var(--pb-grain-size, 160px); mix-blend-mode: soft-light; opacity: .32; }
+.pb-card[data-ext="on"] .pb-band { clip-path: inset(0); }
+.pb-band::before, .pb-band::after { content: ""; position: absolute; inset: 0; pointer-events: none; }
+.pb-band::before { background-image: var(--pb-pattern, none); background-size: 460px; opacity: .55; }
+.pb-band::after { background-image: var(--pb-grain, none); background-size: var(--pb-grain-size, 160px); mix-blend-mode: soft-light; opacity: .32; }
 
 .pb-head { text-align: center; }
 .pb-label { margin: 0; font-size: clamp(16px, 1.39vw, 20px); line-height: 1.4; }
@@ -351,12 +355,11 @@ html.pb-locked .play-cards > :not(.pb-card) { transform: translateX(-300vw); }
 @media (max-width: 600px) and (orientation: portrait) {
   .pb-card { --pb-w: min(calc(100vw - 2 * var(--pb-side)), calc((100svh - 260px) * .75)); }
 }
-/* a soft shadow under the closed box, so it sits on the band like an object (20 Nov); a plain gradient layer, not a
-   shadow on the flipping lid, so the flip stays cheap */
+/* a soft shadow under the closed box (20 Nov): the box's own rounded shape, several soft layers in the band's plum, so it
+   melts into the band; a still layer (not on the flipping lid), hidden while the box is open */
 .pb-tin::before {
-  content: ""; position: absolute; z-index: 0; left: 4%; right: 4%; top: calc(var(--hl, 400px) - 3%); height: max(22px, 7%);
-  background: radial-gradient(closest-side, rgba(110, 30, 70, .30), rgba(110, 30, 70, 0)); pointer-events: none;
-  transition: opacity .3s ease;
+  content: ""; position: absolute; z-index: 0; left: 0; right: 0; top: 0; height: var(--hl, 400px); border-radius: var(--r);
+  box-shadow: 0 2px 3px rgba(120, 35, 80, .12), 0 8px 18px -4px rgba(120, 35, 80, .22), 0 22px 44px -10px rgba(120, 35, 80, .28), 0 44px 90px -20px rgba(120, 35, 80, .30);
+  pointer-events: none; transition: opacity .3s ease;
 }
-.pb-tin[data-shape="tall"]::before { top: calc(var(--hl, 400px) - 1.5%); height: max(22px, 4%); }
-.pb-tin:not([data-state="closed"])::before { opacity: 0; }
+.pb-tin:not([data-state="closed"])::before { opacity: 0; transition: none; }

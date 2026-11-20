@@ -21,6 +21,7 @@
 @property --pc-bg2 { syntax: '<color>'; inherits: false; initial-value: #6AA8F7; }
 /* a registered length, so a calc() strip (the received view's) reaches postcard.js as plain pixels */
 /* the sky's glow and horizon colours, for the glass controls; registered so they fade with the sky */
+@property --pc-shade { syntax: '<color>'; inherits: true; initial-value: #031830; }
 @property --pc-sky-a { syntax: '<color>'; inherits: true; initial-value: #ADFFE5; }
 @property --pc-sky-b { syntax: '<color>'; inherits: true; initial-value: #88CEC6; }
 @property --pc-strip { syntax: '<length>'; inherits: true; initial-value: 0px; }
@@ -37,7 +38,7 @@
     margin-left: calc(50% - 50vw);
     padding: clamp(24px, 3.5vw, 40px) var(--pc-side) clamp(28px, 3.5vw, 44px);
     background: linear-gradient(135deg, var(--pc-bg1), var(--pc-bg2));
-    transition: --pc-bg1 1.2s ease, --pc-bg2 1.2s ease, --pc-sky-a 1.2s ease, --pc-sky-b 1.2s ease;
+    transition: --pc-bg1 1.2s ease, --pc-bg2 1.2s ease, --pc-sky-a 1.2s ease, --pc-sky-b 1.2s ease, --pc-shade 1.2s ease;
 }
 
 /* grain over the card's colour (a still tile made once by postcard.js) */
@@ -695,3 +696,19 @@
 
 /* the share icon's line weight follows the label weight (CARD.labelWeight), so icon and word look equally heavy */
 .pc-share > svg:not(.pc-ring) path { stroke-width: var(--pc-icon-stroke, 1.7); }
+
+/* ---------- looking through a window (20 Nov, to try): a soft shadow inside the frame, stronger at the top ----------
+   CARD.windowShade sets the strength (0 = off). Above the sky and skyline, below the controls. */
+.pc-postcard::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: var(--pc-window, 1);
+    /* mostly from the top (the window's top edge casting it), only a little at the sides, nothing hugging the frame */
+    box-shadow:
+        inset 0 26px 32px -20px color-mix(in srgb, var(--pc-shade, #031830) 92%, transparent),
+        inset 14px 0 22px -16px color-mix(in srgb, var(--pc-shade, #031830) 55%, transparent),
+        inset -14px 0 22px -16px color-mix(in srgb, var(--pc-shade, #031830) 55%, transparent);
+    transition: box-shadow 1.2s ease;
+}
