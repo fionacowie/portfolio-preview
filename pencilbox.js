@@ -2741,8 +2741,32 @@ window.startPencilBox = (BW_IN, BH_IN) => {
     $('pbMore').hidden = !(open && mode !== 'full');
     layout();
   }
+  /* touch screens (20 Nov): no hover to hint that the box opens, so the lid lifts a little, once, the first time the
+     closed box has settled in view (like the laptop hover lift, with a small settle). One transform on the lid. */
+  let lidNudge = null, opened = false;   // opened: no hint needed once someone has opened it
+  if (!matchMedia('(hover: hover)').matches && !reduced && 'IntersectionObserver' in window) {
+    let timer = 0;
+    const io = new IntersectionObserver(([e]) => {
+      clearTimeout(timer);
+      if (!e.isIntersecting || state !== 'closed' || opened) return;
+      timer = setTimeout(() => {
+        if (state !== 'closed' || opened) return;
+        io.disconnect();
+        lidNudge = lid.animate([
+          { transform: 'rotateX(0deg)', easing: 'cubic-bezier(.3,0,.3,1)' },
+          { transform: 'rotateX(-8deg)', offset: .35, easing: 'cubic-bezier(.5,0,.6,1)' },
+          { transform: 'rotateX(0deg)', offset: .68, easing: 'ease-out' },
+          { transform: 'rotateX(-2deg)', offset: .84, easing: 'ease-in' },
+          { transform: 'rotateX(0deg)' },
+        ], { duration: 900 });
+        lidNudge.onfinish = () => { lidNudge = null; };
+      }, 450);
+    }, { threshold: .7 });
+    io.observe(tin);
+  }
   function open() {
     if (state !== 'closed') return;
+    opened = true; if (lidNudge) { lidNudge.cancel(); lidNudge = null; }
     decideMode();
     if (mode === 'full') { peek.hidden = false; drawPeek(); } else { inner.hidden = false; ensureEngine(); }
     const hl = HL(), g = gap(), hb = boxH(hl);
@@ -2850,7 +2874,9 @@ window.startPencilBox = (BW_IN, BH_IN) => {
     const r = box.getBoundingClientRect(), W = innerWidth, H = innerHeight, rad = 16;
     const o = parseFloat(getComputedStyle(fullEl).paddingLeft) || 6, oy = parseFloat(getComputedStyle(fullEl).paddingTop) || 6;
     const sx0 = r.width / W, sy0 = r.height / H, cx0 = r.left + r.width / 2 - W / 2, cy0 = r.top + r.height / 2 - H / 2;
-    const ease = opening ? u => 1 - Math.pow(1 - u, 3) : u => u < .5 ? 4 * u * u * u : 1 - Math.pow(-2 * u + 2, 3) / 2;
+    // both ways ease in and out (20 Nov): opening used to start at full speed, so the first slow frame (the view's first
+    // paint) showed as a jump; easing in hides it, as closing always did
+    const ease = u => u < .5 ? 4 * u * u * u : 1 - Math.pow(-2 * u + 2, 3) / 2;
     const P = [], C = [], N = 24;
     for (let i = 0; i <= N; i++) {
       const e = ease(i / N), u = opening ? e : 1 - e;           // u: 0 = the box, 1 = the full screen
@@ -2863,12 +2889,20 @@ window.startPencilBox = (BW_IN, BH_IN) => {
     fullEl.style.overflow = 'hidden'; fullEl.style.transformOrigin = inner.style.transformOrigin = '0 0';
     fullEl.style.willChange = inner.style.willChange = 'transform';
     const opt = { duration: dur, fill: 'forwards' };
+    const run = () => {
     const a1 = fullEl.animate(P, opt); inner.animate(C, opt);
     a1.onfinish = () => {
       fullEl.getAnimations().forEach(a => a.cancel()); inner.getAnimations().forEach(a => a.cancel());
       fullEl.style.overflow = fullEl.style.willChange = inner.style.willChange = '';
       then && then();
     };
+    };
+    // opening: show the view at the box's size first and let the phone paint it, then start the clock (two frames later),
+    // so its first paint isn't counted as part of the movement
+    if (opening) {
+      fullEl.style.transform = P[0].transform; fullEl.style.borderRadius = P[0].borderRadius; inner.style.transform = C[0].transform;
+      requestAnimationFrame(() => requestAnimationFrame(() => { run(); fullEl.style.transform = fullEl.style.borderRadius = inner.style.transform = ''; }));
+    } else run();
   }
   function enterFull() {
     if (full) return; full = true;
@@ -2878,7 +2912,7 @@ window.startPencilBox = (BW_IN, BH_IN) => {
     if (!reduced) {
       // the paper's drawing waits until the view has grown, so the growing isn't held up (19 Nov)
       api && api.hold(true);
-      growFull(true, 440, () => { api && api.hold(false); setTimeout(hopPencils, 120); });
+      growFull(true, 460, () => { api && api.hold(false); setTimeout(hopPencils, 120); });
     }
     afterOpen();
   }
