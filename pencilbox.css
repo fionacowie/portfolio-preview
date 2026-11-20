@@ -30,10 +30,15 @@
 }
 /* the band's colour is its own layer (20 Nov), so on phones it can grow down with the opening lid, as the card grows on
    laptops: it reaches --pb-ext below the card and is clipped back to the card until the lid swings down */
-.pb-band { position: absolute; left: 0; right: 0; top: 0; bottom: calc(-1 * var(--pb-ext, 0px)); z-index: -1; pointer-events: none;
-  background: linear-gradient(240deg, #FFCB45 0%, #FBA9A6 48%, #F98AF2 100%); clip-path: inset(0 0 var(--pb-ext, 0px) 0); }
+.pb-band { position: absolute; inset: 0; z-index: -1; pointer-events: none;
+  background: linear-gradient(240deg, #FFCB45 0%, #FBA9A6 48%, #F98AF2 100%); }
+/* phones (20 Nov): a plain strip under the band, shown at the tap, so the open lid hangs over band colour rather than the
+   postcard. Its colours continue the band's bottom edge (set in JS); no clip-path, nothing animated, the band itself unchanged */
+.pb-band-ext { display: none; position: absolute; left: 0; right: 0; top: 100%; height: var(--pb-ext, 0px); z-index: -1; pointer-events: none;
+  background: linear-gradient(90deg, var(--pb-ext-l, #F98AF2), var(--pb-ext-r, #FBA5B4)); }
+.pb-band-ext::after { content: ""; position: absolute; inset: 0; background-image: var(--pb-grain, none); background-size: var(--pb-grain-size, 160px); mix-blend-mode: soft-light; opacity: .32; }
+.pb-card[data-ext="on"] .pb-band-ext { display: block; }
 /* faint pencils scattered across the band, then the postcard's still grain over the colour */
-.pb-card[data-ext="on"] .pb-band { clip-path: inset(0); }
 .pb-band::before, .pb-band::after { content: ""; position: absolute; inset: 0; pointer-events: none; }
 .pb-band::before { background-image: var(--pb-pattern, none); background-size: 460px; opacity: .55; }
 .pb-band::after { background-image: var(--pb-grain, none); background-size: var(--pb-grain-size, 160px); mix-blend-mode: soft-light; opacity: .32; }

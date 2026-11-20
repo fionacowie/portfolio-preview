@@ -2588,6 +2588,16 @@ window.startPencilBox = (BW_IN, BH_IN) => {
   const $ = id => document.getElementById(id);
   const tin = $('pbTin'), box = $('pbBox'), inner = $('pbInner'), lid = $('pbLid'), card = $('pbCard');
   const band = document.createElement('div'); band.className = 'pb-band'; band.setAttribute('aria-hidden', 'true'); card.prepend(band);
+  const bandX = document.createElement('div'); bandX.className = 'pb-band-ext'; bandX.setAttribute('aria-hidden', 'true'); card.prepend(bandX);
+  // the band's colour along its bottom edge, left and right (its 240° gradient: #FFCB45 0, #FBA9A6 .48, #F98AF2 1)
+  const bandEdge = () => {
+    const W = card.offsetWidth, H = card.offsetHeight, a = 240 * Math.PI / 180, dx = Math.sin(a), dy = -Math.cos(a);
+    const L = Math.abs(W * dx) + Math.abs(H * dy), at = x => .5 + ((x - W / 2) * dx + (H / 2) * dy) / L;
+    const S = [[0, [255, 203, 69]], [.48, [251, 169, 166]], [1, [249, 138, 242]]];
+    const col = t => { t = Math.min(1, Math.max(0, t)); const i = t <= .48 ? 0 : 1, [t0, c0] = S[i], [t1, c1] = S[i + 1], f = (t - t0) / (t1 - t0);
+      return `rgb(${c0.map((c, k) => Math.round(c + (c1[k] - c) * f)).join(',')})`; };
+    card.style.setProperty('--pb-ext-l', col(at(0))); card.style.setProperty('--pb-ext-r', col(at(W)));
+  };
   // phones: how far the open lid hangs below the band (the band grows by this much as it swings down)
   const bandExt = () => Math.max(0, Math.ceil(tin.getBoundingClientRect().bottom + gap() + HL() + 24 - card.getBoundingClientRect().bottom));
   const openBtn = $('pbOpen'), front = $('pbFront'), inside = $('pbInside');
@@ -2795,7 +2805,7 @@ window.startPencilBox = (BW_IN, BH_IN) => {
       // phones: the band grows down with the lid, as the card does on laptops (a clip on its own layer, nothing re-measured)
       // (20 Nov, lighter) the band is simply made long enough at the tap, nothing animated: it reaches down under where
       // the lid will hang (mostly off screen at that moment), and goes back once the lid is shut
-      card.style.setProperty('--pb-ext', bandExt() + 'px'); card.dataset.ext = 'on';
+      bandEdge(); card.style.setProperty('--pb-ext', bandExt() + 'px'); card.dataset.ext = 'on';
       // phones: once the lid is down, the box grows to fill the screen
       setTimeout(() => { if (state === 'opening') enterFull(); }, dur * .8);
     } else {
@@ -2912,7 +2922,9 @@ window.startPencilBox = (BW_IN, BH_IN) => {
     if (!reduced) {
       // the paper's drawing waits until the view has grown, so the growing isn't held up (19 Nov)
       api && api.hold(true);
-      growFull(true, 460, () => { api && api.hold(false); setTimeout(hopPencils, 120); });
+      // no hop on phones (Fiona, 20 Nov): the lid, the band and the grow are movement enough, and the full-screen view
+      // already says you're in a drawing space
+      growFull(true, 460, () => { api && api.hold(false); });
     }
     afterOpen();
   }
