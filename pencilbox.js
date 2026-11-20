@@ -2751,32 +2751,39 @@ window.startPencilBox = (BW_IN, BH_IN) => {
     $('pbMore').hidden = !(open && mode !== 'full');
     layout();
   }
-  /* touch screens (20 Nov): no hover to hint that the box opens, so the lid lifts a little, once, the first time the
-     closed box has settled in view (like the laptop hover lift, with a small settle). One transform on the lid. */
-  let lidNudge = null, opened = false;   // opened: no hint needed once someone has opened it
-  if (!matchMedia('(hover: hover)').matches && !reduced && 'IntersectionObserver' in window) {
-    let timer = 0;
-    const io = new IntersectionObserver(([e]) => {
+  /* the lid's little lift (20 Nov): a hint that the box opens. Phones and laptops; plays once each time the closed box
+     arrives fully on screen. Replays follow the postcard's rule: only after the box has been completely off screen
+     (Fiona: "it's got to have completely cleared the screen"). Never while lifting, while open or full screen, with
+     reduced motion, in a hidden tab, or (laptops) while the pointer is already over the box (its hover lift shows). */
+  let lidNudge = null;
+  if (!reduced && 'IntersectionObserver' in window) {
+    const touch = !matchMedia('(hover: hover)').matches;
+    let played = false, gone = false, timer = 0;
+    const FULL = .98;                                                   // "fully on screen", allowing for rounding
+    const lift = () => {
+      if (lidNudge || state !== 'closed' || document.hidden || (!touch && lid.matches(':hover'))) return false;
+      const up = touch ? 8 : 5, settle = touch ? 2 : 1.2;
+      lidNudge = lid.animate([
+        { transform: 'rotateX(0deg)', easing: 'cubic-bezier(.3,0,.3,1)' },
+        { transform: `rotateX(-${up}deg)`, offset: .35, easing: 'cubic-bezier(.5,0,.6,1)' },
+        { transform: 'rotateX(0deg)', offset: .68, easing: 'ease-out' },
+        { transform: `rotateX(-${settle}deg)`, offset: .84, easing: 'ease-in' },
+        { transform: 'rotateX(0deg)' },
+      ], { duration: 900 });
+      lidNudge.onfinish = lidNudge.oncancel = () => { lidNudge = null; };
+      return true;
+    };
+    new IntersectionObserver(([e]) => {
       clearTimeout(timer);
-      if (!e.isIntersecting || state !== 'closed' || opened) return;
-      timer = setTimeout(() => {
-        if (state !== 'closed' || opened) return;
-        io.disconnect();
-        lidNudge = lid.animate([
-          { transform: 'rotateX(0deg)', easing: 'cubic-bezier(.3,0,.3,1)' },
-          { transform: 'rotateX(-8deg)', offset: .35, easing: 'cubic-bezier(.5,0,.6,1)' },
-          { transform: 'rotateX(0deg)', offset: .68, easing: 'ease-out' },
-          { transform: 'rotateX(-2deg)', offset: .84, easing: 'ease-in' },
-          { transform: 'rotateX(0deg)' },
-        ], { duration: 900 });
-        lidNudge.onfinish = () => { lidNudge = null; };
-      }, 450);
-    }, { threshold: .7 });
-    io.observe(tin);
+      if (e.intersectionRatio === 0) { if (played) gone = true; return; }
+      if (e.intersectionRatio < FULL || (played && !gone)) return;
+      // a short pause once it's fully on screen, so it moves when the box is settled, not while it's flicked past
+      timer = setTimeout(() => { if (lift()) { played = true; gone = false; } }, 300);
+    }, { threshold: [0, FULL] }).observe(tin);
   }
   function open() {
     if (state !== 'closed') return;
-    opened = true; if (lidNudge) { lidNudge.cancel(); lidNudge = null; }
+    if (lidNudge) { lidNudge.cancel(); lidNudge = null; }
     decideMode();
     if (mode === 'full') { peek.hidden = false; drawPeek(); } else { inner.hidden = false; ensureEngine(); }
     const hl = HL(), g = gap(), hb = boxH(hl);
