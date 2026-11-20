@@ -114,7 +114,7 @@
 .pb .slots { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; background: var(--pb-tex), #0A1829; background-blend-mode: soft-light, normal; border-radius: 8px; padding: 10px 8px 6px; box-shadow: inset 0 6px 14px #0009; }
 .pb .slot { appearance: none; border: 0; background: transparent; color: var(--muted); display: grid; justify-items: center; gap: 4px; padding: 4px 2px 6px; cursor: pointer; border-radius: 8px; font: 500 13px/1.2 "Jost", system-ui, sans-serif; }
 .pb .slot svg { width: 100%; max-width: 44px; height: 118px; overflow: visible; transition: transform .25s cubic-bezier(.3,1.4,.5,1), opacity .25s ease; }
-.pb .slot:hover svg { transform: translateY(-8px); }
+@media (hover: hover) { .pb .slot:hover svg { transform: translateY(-8px); } }
 .pb .slot.nudge svg { animation: pbNudge .5s cubic-bezier(.3,1.4,.5,1) var(--d, 0ms); }
 @keyframes pbNudge { 40% { transform: translateY(-10px); } 100% { transform: none; } }
 @keyframes pbNudgeSide { 40% { transform: translateX(8px); } 100% { transform: none; } }
@@ -136,7 +136,7 @@
   .pb .desk .slots { grid-template-columns: 1fr; grid-auto-rows: 1fr; padding: 8px 6px; gap: 2px; }
   .pb .desk .slot { padding: 6px 2px; align-content: center; }
   .pb .desk .slot svg { width: 100%; max-width: 104px; height: 30px; }
-  .pb .desk .slot:hover svg { transform: translateX(6px); }
+  @media (hover: hover) { .pb .desk .slot:hover svg { transform: translateX(6px); } }
   .pb .desk .slot[aria-pressed="true"] svg { transform: translateX(14px); }
   .pb .desk .slot .name { font-size: 12px; }
   .pb .desk .slot.nudge svg { animation-name: pbNudgeSide; }
@@ -197,7 +197,10 @@
   background: var(--pb-navy); color: #fff; transition: background .3s ease, color .3s ease, transform .3s ease;
 }
 .pb-rb svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
-.pb-rb:hover { background: var(--pb-hi); color: var(--pb-navy); transform: scale(1.04); }
+/* hover only where there is a real pointer: phones keep a tapped button "hovered", which made the flipped eraser /
+   pencil look switched on (20 Nov). On touch the pastel shows only while the finger is on the button. */
+@media (hover: hover) { .pb-rb:hover { background: var(--pb-hi); color: var(--pb-navy); transform: scale(1.04); } }
+@media (hover: none) { .pb-rb:active { background: var(--pb-hi); color: var(--pb-navy); } }
 .pb-rb:active { transform: scale(.95); }
 .pb-rb:focus-visible { outline: 2px solid var(--pb-focus); outline-offset: 2px; }
 .pb-rb .off { display: none; }
@@ -250,7 +253,8 @@ html.pb-locked, html.pb-locked body { overflow: hidden; overscroll-behavior: non
   background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.5); color: #fff; transition: background .3s ease, color .3s ease;
 }
 .pb-full .pb-x svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; }
-.pb-full .pb-x:hover { background: var(--pb-hi); color: var(--pb-navy); border-color: transparent; }
+@media (hover: hover) { .pb-full .pb-x:hover { background: var(--pb-hi); color: var(--pb-navy); border-color: transparent; } }
+.pb-full .pb-x:active { background: var(--pb-hi); color: var(--pb-navy); border-color: transparent; }
 .pb-full .pb-x:focus-visible { outline: 1.5px solid rgba(255, 255, 255, .6); outline-offset: 2px; }   /* on navy: a soft white line (19 Nov) */
 
 /* phones: while the lid opens and closes, the box shows a small copy of the paper */
@@ -334,10 +338,25 @@ html.pb-locked .play-cards > :not(.pb-card) { transform: translateX(-300vw); }
   .pb-full .desk .box-top { display: flex; text-align: left; }
 }
 /* the picked pencil's colours (19 Nov): the hover on the round tools, their labels, "Close box" and the hint all take a
-   pale version of the pencil in your hand; the Flowers pastel before a pencil is picked and with the eraser */
+   pale version of the pencil in your hand (eraser end too); the Flowers pastel before a pencil is picked */
 .pb[data-pencil="glitter"] { --pb-hi: linear-gradient(135deg, color-mix(in srgb, #5B8BEF, #fff 68%), color-mix(in srgb, #FF83FE, #fff 68%) 60%, color-mix(in srgb, #FFC800, #fff 68%)); }
 .pb[data-pencil="bubbles"] { --pb-hi: linear-gradient(135deg, color-mix(in srgb, #A8C3F7, #fff 45%), color-mix(in srgb, #FFB5FE, #fff 45%) 40%, color-mix(in srgb, #ADCEC0, #fff 45%) 70%, color-mix(in srgb, #FFDE66, #fff 45%)); }
 .pb[data-pencil="stars"] { --pb-hi: linear-gradient(135deg, color-mix(in srgb, #F79AB8, #fff 55%), color-mix(in srgb, #FFA59A, #fff 55%) 55%, color-mix(in srgb, #FFC9A6, #fff 55%)); }
 .pb[data-pencil="flowers"] { --pb-hi: linear-gradient(135deg, color-mix(in srgb, #336FED, #fff 75%), color-mix(in srgb, #FD1BED, #fff 78%) 60%, color-mix(in srgb, #FFC800, #fff 65%)); }
 .pb[data-pencil="birds"] { --pb-hi: linear-gradient(135deg, color-mix(in srgb, #D3E9FE, #fff 20%), color-mix(in srgb, #A9D4FD, #fff 40%) 55%, color-mix(in srgb, #7DBAF6, #fff 55%)); }
-.pb .stage > .hint { color: #0F2D47; border-color: #0F2D4718; background: var(--pb-hi); }   /* the pencil's tint; with the eraser, the Flowers pastel */
+.pb .stage > .hint { color: #0F2D47; border-color: #0F2D4718; background: var(--pb-hi); }   /* the pencil's tint */
+
+/* the lid's two shapes (20 Nov): Fiona's portrait lid on phones held upright, the landscape lid elsewhere */
+.pb-tin:not([data-shape="tall"]) .pb-tall, .pb-tin[data-shape="tall"] .pb-wide { display: none; }
+@media (max-width: 600px) and (orientation: portrait) {
+  .pb-card { --pb-w: min(calc(100vw - 2 * var(--pb-side)), calc((100svh - 260px) * .75)); }
+}
+/* a soft shadow under the closed box, so it sits on the band like an object (20 Nov); a plain gradient layer, not a
+   shadow on the flipping lid, so the flip stays cheap */
+.pb-tin::before {
+  content: ""; position: absolute; z-index: 0; left: 4%; right: 4%; top: calc(var(--hl, 400px) - 3%); height: max(22px, 7%);
+  background: radial-gradient(closest-side, rgba(110, 30, 70, .30), rgba(110, 30, 70, 0)); pointer-events: none;
+  transition: opacity .3s ease;
+}
+.pb-tin[data-shape="tall"]::before { top: calc(var(--hl, 400px) - 1.5%); height: max(22px, 4%); }
+.pb-tin:not([data-state="closed"])::before { opacity: 0; }
