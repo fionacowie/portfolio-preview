@@ -38,6 +38,10 @@
   background: linear-gradient(90deg, var(--pb-ext-l, #F98AF2), var(--pb-ext-r, #FBA5B4)); }
 .pb-band-ext::after { content: ""; position: absolute; inset: 0; background-image: var(--pb-grain, none); background-size: var(--pb-grain-size, 160px); mix-blend-mode: soft-light; opacity: .32; }
 .pb-card[data-ext="on"] .pb-band-ext { display: block; }
+/* phones (20 Nov): no overflow clipping on the card at all. Safari seems to clip the card top to bottom with
+   overflow-x: clip, which hid the strip below the band (the 3D lid escaped the clip, so it still showed). The page's
+   body already hides sideways overflow. */
+@media (max-width: 600px) { .pb-card { overflow: visible; } }
 /* faint pencils scattered across the band, then the postcard's still grain over the colour */
 .pb-band::before, .pb-band::after { content: ""; position: absolute; inset: 0; pointer-events: none; }
 .pb-band::before { background-image: var(--pb-pattern, none); background-size: 460px; opacity: .55; }
