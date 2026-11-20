@@ -2734,9 +2734,8 @@ window.startPencilBox = (BW_IN, BH_IN) => {
   const stopAnims = () => { anims.forEach(a => a.cancel()); anims = []; };
   function setOpen(open) {
     state = open ? 'open' : 'closed'; tin.dataset.state = state;
-    if (!open) dropGhost();
     // phones: the band stays grown while the box is open; back to the card's size once closed
-    if (open && mode === 'full') card.dataset.ext = 'on'; else { delete card.dataset.ext; if (!open) card.style.removeProperty('--pb-ext'); }
+    if (!open) { delete card.dataset.ext; card.style.removeProperty('--pb-ext'); }
     inside.inert = !open; front.inert = open; openBtn.setAttribute('aria-expanded', open);
     if (!open && mode !== 'full') inner.hidden = true;
     $('pbMore').hidden = !(open && mode !== 'full');
@@ -2745,7 +2744,7 @@ window.startPencilBox = (BW_IN, BH_IN) => {
   function open() {
     if (state !== 'closed') return;
     decideMode();
-    if (mode === 'full') { peek.hidden = false; readyFull(); makeGhost(); } else { inner.hidden = false; ensureEngine(); }
+    if (mode === 'full') { peek.hidden = false; drawPeek(); } else { inner.hidden = false; ensureEngine(); }
     const hl = HL(), g = gap(), hb = boxH(hl);
     box.style.height = hl + 'px';
     tin.style.setProperty('--hb', hb + 'px'); tin.style.setProperty('--d', (hb - hl) + 'px');
@@ -2770,8 +2769,9 @@ window.startPencilBox = (BW_IN, BH_IN) => {
     ];
     if (mode === 'full') {
       // phones: the band grows down with the lid, as the card does on laptops (a clip on its own layer, nothing re-measured)
-      const ext = bandExt(); card.style.setProperty('--pb-ext', ext + 'px');
-      anims.push(band.animate([{ clipPath: `inset(0 0 ${ext}px 0)` }, { clipPath: `inset(0 0 ${ext}px 0)`, offset: .12, easing: ease.swing }, { clipPath: 'inset(0 0 0px 0)', offset: .8 }, { clipPath: 'inset(0 0 0px 0)' }], o));
+      // (20 Nov, lighter) the band is simply made long enough at the tap, nothing animated: it reaches down under where
+      // the lid will hang (mostly off screen at that moment), and goes back once the lid is shut
+      card.style.setProperty('--pb-ext', bandExt() + 'px'); card.dataset.ext = 'on';
       // phones: once the lid is down, the box grows to fill the screen
       setTimeout(() => { if (state === 'opening') enterFull(); }, dur * .8);
     } else {
@@ -2815,10 +2815,8 @@ window.startPencilBox = (BW_IN, BH_IN) => {
     state = 'closing'; tin.dataset.state = 'closing'; inside.inert = true; $('pbMore').hidden = true;
     const dur = mode === 'full' ? 620 : 1050, o = { duration: dur, fill: 'forwards' };   // phones 19 Nov: 800 → 620
     lid.style.transition = 'none';
-    const ext = parseFloat(card.style.getPropertyValue('--pb-ext')) || 0;
-    const bandAnim = mode === 'full' && ext ? [band.animate([{ clipPath: 'inset(0 0 0px 0)', easing: ease.swing }, { clipPath: `inset(0 0 ${ext}px 0)`, offset: .82 }, { clipPath: `inset(0 0 ${ext}px 0)` }], o)] : [];
     anims = [
-      ...bandAnim,
+
       lid.animate([
         { transform: `translateY(${d}px) rotateX(-180deg)`, easing: ease.swing },
         { transform: 'translateY(0px) rotateX(3deg)', offset: .82, easing: ease.settle },
@@ -2848,27 +2846,8 @@ window.startPencilBox = (BW_IN, BH_IN) => {
   /* the full-screen view grows out of the box and shrinks back into it as one piece (19 Nov): the whole view is scaled
      from the box's rectangle (clipped to its rounded outline), and the tray and paper inside are scaled back the other way,
      so they never stretch and you see them throughout. Only transforms change, which phones handle smoothly. */
-  /* phones (20 Nov): while the lid swings, the box shows the full-screen view itself, shrunk to the box's width (a copy:
-     tray at the top, paper below, cut off at the box's bottom), and the grow keeps that layout, so nothing jumps between
-     the open box and the full page. The copy is made from the real view, laid out but invisible, at the tap. */
-  let ghost = null;
-  function makeGhost() {
-    dropGhost();
-    const W = innerWidth, H = innerHeight, S = box.getBoundingClientRect().width / W;
-    const c = fullEl.cloneNode(true);
-    c.hidden = false; c.style.cssText = `width:${W}px;height:${H}px;transform:scale(${S})`; c.setAttribute('aria-hidden', 'true'); c.inert = true;
-    const live = [...fullEl.querySelectorAll('canvas')], copies = [...c.querySelectorAll('canvas')];
-    // blank paper: the copies stay tiny and empty (the paper colour shows through), so nothing big is drawn at the tap
-    copies.forEach((k, i) => { const s = live[i]; if (!drawn || !s || !s.width) { k.width = k.height = 1; return; } k.width = s.width; k.height = s.height; try { k.getContext('2d').drawImage(s, 0, 0); } catch (e) {} });
-    c.querySelectorAll('[id]').forEach(n => n.removeAttribute('id')); c.removeAttribute('id');
-    ghost = document.createElement('div'); ghost.className = 'pb-ghost'; ghost.setAttribute('aria-hidden', 'true'); ghost.append(c);
-    box.append(ghost);
-  }
-  function dropGhost() { ghost && ghost.remove(); ghost = null; }
-  // the full-screen view laid out but not shown, so its size and the paper's shape are ready before the grow
-  function readyFull() { fullEl.style.visibility = 'hidden'; fullEl.hidden = false; ensureEngine(); fitPaper(); api && api.hold(true); }
   function growFull(opening, dur, then) {
-    const r = box.getBoundingClientRect(), W = innerWidth, H = innerHeight, rad = parseFloat(getComputedStyle(box).borderTopLeftRadius) || 16;
+    const r = box.getBoundingClientRect(), W = innerWidth, H = innerHeight, rad = 16;
     const o = parseFloat(getComputedStyle(fullEl).paddingLeft) || 6, oy = parseFloat(getComputedStyle(fullEl).paddingTop) || 6;
     const sx0 = r.width / W, sy0 = r.height / H, cx0 = r.left + r.width / 2 - W / 2, cy0 = r.top + r.height / 2 - H / 2;
     const ease = opening ? u => 1 - Math.pow(1 - u, 3) : u => u < .5 ? 4 * u * u * u : 1 - Math.pow(-2 * u + 2, 3) / 2;
@@ -2878,9 +2857,8 @@ window.startPencilBox = (BW_IN, BH_IN) => {
       const sx = sx0 + (1 - sx0) * u, sy = sy0 + (1 - sy0) * u;
       const bx = r.left * (1 - u), by = r.top * (1 - u), cx = cx0 * (1 - u), cy = cy0 * (1 - u);
       P.push({ transform: `translate(${bx}px, ${by}px) scale(${sx}, ${sy})`, borderRadius: `${rad * (1 - u) / sx}px / ${rad * (1 - u) / sy}px` });
-      // the tray and paper keep their layout, at the window's width scale, from its top (cut off below until it's grown)
-      const k = sx / sy, ty = oy * k - oy;
-      C.push({ transform: `translate(0px, ${ty}px) scale(1, ${k})` });
+      const tx = (cx - bx) / sx - o * (1 - 1 / sx), ty = (cy - by) / sy - oy * (1 - 1 / sy);
+      C.push({ transform: `translate(${tx}px, ${ty}px) scale(${1 / sx}, ${1 / sy})` });
     }
     fullEl.style.overflow = 'hidden'; fullEl.style.transformOrigin = inner.style.transformOrigin = '0 0';
     fullEl.style.willChange = inner.style.willChange = 'transform';
@@ -2894,14 +2872,14 @@ window.startPencilBox = (BW_IN, BH_IN) => {
   }
   function enterFull() {
     if (full) return; full = true;
-    fullEl.hidden = false; fullEl.style.visibility = ''; html.classList.add('pb-locked');
+    fullEl.hidden = false; html.classList.add('pb-locked');
     ensureEngine(); fitPaper();
     try { if (!(history.state && history.state.pbFull)) history.pushState({ pbFull: true }, ''); } catch (e) {}
     if (!reduced) {
       // the paper's drawing waits until the view has grown, so the growing isn't held up (19 Nov)
       api && api.hold(true);
       growFull(true, 440, () => { api && api.hold(false); setTimeout(hopPencils, 120); });
-    } else api && api.hold(false);
+    }
     afterOpen();
   }
   let closeWhenOpen = false;
@@ -2909,9 +2887,9 @@ window.startPencilBox = (BW_IN, BH_IN) => {
   function exitFull() {
     if (!full || leaving) return;   // once only (the back gesture and its safety timer can both ask)
     leaving = true;
-    makeGhost();
+    drawPeek();
     const done = () => {
-      full = false; leaving = false; fullEl.hidden = true; fullEl.style.visibility = ''; html.classList.remove('pb-locked');
+      full = false; leaving = false; fullEl.hidden = true; html.classList.remove('pb-locked');
       api && api.hold(false);
       // straight on: the lid swings shut, then the author's note appears under the tin
       if (state === 'open') close(); else closeWhenOpen = true;
@@ -2952,7 +2930,7 @@ window.startPencilBox = (BW_IN, BH_IN) => {
     if (want === mode) return;
     if (want === 'full') { setMode('full'); layout(); enterFull(); }
     else {
-      full = false; fullEl.hidden = true; fullEl.style.visibility = ''; html.classList.remove('pb-locked'); dropGhost();
+      full = false; fullEl.hidden = true; html.classList.remove('pb-locked');
       try { if (history.state && history.state.pbFull) history.replaceState(null, ''); } catch (e) {}
       setMode('inline'); inner.hidden = false; layout();
     }

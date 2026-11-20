@@ -266,8 +266,6 @@ html.pb-locked, html.pb-locked body { overflow: hidden; overscroll-behavior: non
   border-radius: max(12px, 3.2cqw); background: var(--pb-tex), var(--pb-navy); background-blend-mode: soft-light, normal; padding: 10px; display: grid; }
 .pb-peek[hidden] { display: none; }
 .pb-peek canvas { position: absolute; inset: 10px; width: calc(100% - 20px); height: calc(100% - 20px); display: block; border-radius: 10px; background: var(--pb-paper); }
-.pb-ghost { position: absolute; inset: 0; z-index: 1; overflow: hidden; border-radius: var(--r); pointer-events: none; }
-.pb-ghost > .pb-full { position: absolute; inset: auto; left: 0; top: 0; z-index: auto; transform-origin: 0 0; }
 .pb-more { margin: 0; text-align: center; }
 /* like the postcard's "See my portfolio": bold black on the band, the pastel as a pill behind it on hover */
 
